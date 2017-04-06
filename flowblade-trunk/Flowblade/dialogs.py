@@ -310,21 +310,37 @@ def _export_file_name_dialog(callback, project_name, dialog_title):
     dialog.connect('response', callback)
     dialog.show()
 
-def export_xml_compound_clip_dialog(callback, default_name, dialog_title, data=None):
-    dialog = Gtk.FileChooserDialog(dialog_title,  gui.editor_window.window,
-                                   Gtk.FileChooserAction.SAVE,
-                                   (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
-                                   _("Create").encode('utf-8'), Gtk.ResponseType.ACCEPT))
-    dialog.set_action(Gtk.FileChooserAction.SAVE)
-    dialog.set_current_name(default_name)
-    dialog.set_do_overwrite_confirmation(True)
+def compound_clip_name_dialog(callback, default_name, dialog_title, data=None):
+    
+    dialog = Gtk.Dialog(dialog_title,  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT,
+                        _("Create").encode('utf-8'), Gtk.ResponseType.ACCEPT))
 
-    dialog.set_select_multiple(False)
+    name_entry = Gtk.Entry()
+    name_entry.set_width_chars(30)
+    name_entry.set_text(default_name)
+    name_entry.set_activates_default(True)
+
+    name_select = panels.get_two_column_box(Gtk.Label(label=_("Clip Name:")),
+                                               name_entry,
+                                               180)
+
+    vbox = Gtk.VBox(False, 2)
+    vbox.pack_start(name_select, False, False, 0)
+    vbox.pack_start(guiutils.get_pad_label(12, 12), False, False, 0)
+
+    alignment = dialogutils.get_alignment2(vbox)
+
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.set_default_response(Gtk.ResponseType.ACCEPT)
     if data == None:
-        dialog.connect('response', callback)
+        dialog.connect('response', callback, name_entry)
     else:
-        dialog.connect('response', callback, data)
-    dialog.show()
+        dialog.connect('response', callback, (data, name_entry))
+    dialog.show_all()
     
 def save_env_data_dialog(callback):
     dialog = Gtk.FileChooserDialog(_("Save Runtime Environment Data"),  gui.editor_window.window,
@@ -427,10 +443,11 @@ def about_dialog(parent_window):
     flow_label = Gtk.Label(label="Flowblade Movie Editor")
     ver_label = Gtk.Label(label="1.12.0")
     janne_label = Gtk.Label(label="Copyright 2016 Janne Liljeblad and contributors")
-    page_label = Gtk.Label(label=_("Project page:") + " " + "https://github.com/jliljebl/flowblade")
+    page_label = Gtk.Label(label=_("Project page:") + " " + "<a href=\"https://github.com/jliljebl/flowblade\">https://github.com/jliljebl/flowblade</a>")
+    page_label.set_use_markup(True)
     flow_label.modify_font(Pango.FontDescription("sans bold 14"))
-    janne_label.modify_font(Pango.FontDescription("sans 8"))
-    page_label.modify_font(Pango.FontDescription("sans 8"))
+    janne_label.modify_font(Pango.FontDescription("sans 10"))
+    page_label.modify_font(Pango.FontDescription("sans 10"))
 
     vbox = Gtk.VBox(False, 4)
     vbox.pack_start(guiutils.get_pad_label(30, 12), False, False, 0)
@@ -1150,6 +1167,8 @@ def keyboard_shortcuts_dialog(parent_window):
     general_vbox.pack_start(_get_kb_row(_("Control + O"), _("Open Project")), False, False, 0)
     general_vbox.pack_start(_get_kb_row(_("TAB"), _("Switch Monitor Source")), False, False, 0)
     general_vbox.pack_start(_get_kb_row(_("Control + L"), _("Log Marked Clip Range")), False, False, 0)
+    general_vbox.pack_start(_get_kb_row(_("="), _("Zoom In")), False, False, 0)
+    general_vbox.pack_start(_get_kb_row(_("-"), _("Zoom Out")), False, False, 0)
     general = guiutils.get_named_frame(_("General"), general_vbox)
 
     tline_vbox = Gtk.VBox()
