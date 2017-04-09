@@ -61,6 +61,7 @@ EVENT_SAVED_SNAPSHOT = 5
 
 thumbnailer = None
 
+_project_properties_default_values = {"tline_shrink_vertical":False}
 
 class Project:
     """
@@ -86,6 +87,7 @@ class Project:
         self.proxy_data = miscdataobjects.ProjectProxyEditingData()
         self.update_media_lengths_on_load = False # old projects < 1.10 had wrong media length data which just was never used.
                                                   # 1.10 needed that data for the first time and required recreating it correctly for older projects
+        self.project_properties = {} # Key value pair for misc persistent properties, dict is used that we can add thesse without worrying loading
 
         self.SAVEFILE_VERSION = SAVEFILE_VERSION
         
@@ -282,7 +284,16 @@ class Project:
         
         return True
 
+    def get_project_property(self, property_name):
+        try:
+            return self.project_properties[property_name]
+        except:
+            try:
+                return _project_properties_default_values[property_name]
+            except:
+                print "Unknown project property ", property_name
 
+            
 class MediaFile:
     """
     Media file that can added to and edited in Sequence.

@@ -518,6 +518,12 @@ def sync_compositor(compositor):
     action = edit.move_compositor_action(data)
     action.do_edit()
 
+def set_compositors_fades_defaults():
+    dialogs.set_fades_defaults_dialog(_compositors_fades_defaults_callback)
+
+def _compositors_fades_defaults_callback(dialog, response_id):
+    dialog.destroy()
+        
 def split_audio_button_pressed():
     if movemodes.selected_track == -1:
         return
@@ -1140,4 +1146,9 @@ def all_filters_on():
     current_sequence().set_all_filters_active_state(True)
     clipeffectseditor.update_stack_view()
 
+def set_track_small_height(track_index):
+    track = get_track(track_index)
+    track.height = appconsts.TRACK_HEIGHT_SMALL
+    if editorstate.SCREEN_HEIGHT < 863:
+        track.height = appconsts.TRACK_HEIGHT_SMALLEST
 

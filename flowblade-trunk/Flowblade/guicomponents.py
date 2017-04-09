@@ -1962,16 +1962,17 @@ class TracksNumbersSelect:
         self.MAX_TRACKS = appconsts.MAX_TRACKS
         
         self.widget = Gtk.HBox()
+        
         self.video_label = Gtk.Label(_("Video:"))
         self.video_tracks = Gtk.SpinButton.new_with_range(1, 8, 1)
         self.video_tracks.set_value(v_tracks)
-        #self.video_tracks.set_editable(False)
         self.video_tracks.connect("value-changed", self.video_tracks_changed)
+        
         self.audio_label = Gtk.Label(_("Audio:"))
         self.audio_tracks = Gtk.SpinButton.new_with_range(1, 8, 1)
         self.audio_tracks.set_value(a_tracks)
-        #self.audio_tracks.set_editable(False)
         self.audio_tracks.connect("value-changed", self.audio_tracks_changed)
+        
         self.label = Gtk.Label(_("Number of Tracks:"))
         self.tracks_amount_info = Gtk.Label()
         self.set_total_tracks_info()
@@ -2082,6 +2083,15 @@ def get_all_tracks_popup_menu(event, callback):
     _add_separetor(menu)
     menu.add(_get_menu_item(_("Activate All Tracks"), callback, "allactive" ))
     menu.add(_get_menu_item(_("Activate Only Current Top Active Track"), callback, "topactiveonly" ))
+    _add_separetor(menu)
+    shrink_tline_item = Gtk.CheckMenuItem(_("Vertical Shrink Timeline").encode('utf-8'))
+    shrink_tline_item.set_active(PROJECT().get_project_property("tline_shrink_vertical"))
+    shrink_tline_item.show()
+    shrink_tline_item.connect("toggled", callback, "shrink" )
+    if len(current_sequence().tracks) == 11:
+        shrink_tline_item.set_sensitive(False) # This can't do anything if 9 editable tracks in sequence
+    menu.append(shrink_tline_item)
+        
     menu.popup(None, None, None, None, event.button, event.time)
 
 def get_audio_levels_popup_menu(event, callback):
