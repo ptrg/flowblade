@@ -235,6 +235,62 @@ def _mute_clip(data):
         action = edit.unmute_clip(data)
         action.do_edit()
 
+def _delete_clip(data):
+    tlineaction.splice_out_button_pressed()
+    
+def _lift(data):
+    tlineaction.lift_button_pressed()
+    
+def _set_length(data):
+    clip, track, item_id, item_data = data
+    dialogs.clip_length_change_dialog(_change_clip_length_dialog_callback, clip, track)
+
+def _change_clip_length_dialog_callback(dialog, response_id, clip, track, length_changer):
+    if response_id != Gtk.ResponseType.ACCEPT:
+        dialog.destroy()
+        return
+
+    length = length_changer.get_length()
+    index = track.clips.index(clip)
+    
+    dialog.destroy()
+    
+    data = {"track":track,
+            "clip":clip,
+            "index":index,
+            "length":length}
+            
+    action = edit.set_clip_length_action(data)
+    action.do_edit()
+                
+def _stretch_next(data):
+    clip, track, item_id, item_data = data
+    try:
+        next_index = track.clips.index(clip) + 1
+        if next_index >= len( track.clips):
+            return # clip is last clip
+        if track.clips[next_index].is_blanck_clip == True:
+            # Next clip is blank so we can do this.
+            clip = track.clips[next_index]
+            data = (clip, track, item_id, item_data)
+            _cover_blank_from_prev(data, True)
+    except:
+        pass # any error means that this can't be done
+        
+def _stretch_prev(data):
+    clip, track, item_id, item_data = data
+    try:
+        prev_index = track.clips.index(clip) - 1
+        if prev_index < 0:
+            return # clip is first clip
+        if track.clips[prev_index].is_blanck_clip == True:
+            # Next clip is blank so we can do this.
+            clip = track.clips[prev_index]
+            data = (clip, track, item_id, item_data)
+            _cover_blank_from_next(data, True)
+    except:
+        pass # any error means that this can't be done
+        
 def _delete_blank(data):
     clip, track, item_id, x = data
     movemodes.select_blank_range(track, clip)
@@ -245,13 +301,17 @@ def _delete_blank(data):
     action = edit.remove_multiple_action(data)
     action.do_edit()
 
-def _cover_blank_from_prev(data):
+def _cover_blank_from_prev(data, called_from_prev_clip=False):
     clip, track, item_id, item_data = data
-    clip_index = movemodes.selected_range_in - 1
-    if clip_index < 0: # we're not getting legal clip index
-        return 
-    cover_clip = track.clips[clip_index]
-
+    if not called_from_prev_clip:
+        clip_index = movemodes.selected_range_in - 1
+        if clip_index < 0: # we're not getting legal clip index
+            return 
+        cover_clip = track.clips[clip_index]
+    else:
+        clip_index = track.clips.index(clip) - 1
+        cover_clip = track.clips[clip_index]
+        
     # Check that clip covers blank area
     total_length = 0
     for i in range(movemodes.selected_range_in,  movemodes.selected_range_out + 1):
@@ -269,14 +329,19 @@ def _cover_blank_from_prev(data):
     action = edit.trim_end_over_blanks(data)
     action.do_edit()
 
-def _cover_blank_from_next(data):
+def _cover_blank_from_next(data, called_from_next_clip=False):
     clip, track, item_id, item_data = data
-    clip_index = movemodes.selected_range_out + 1
-    blank_index = movemodes.selected_range_in
-    if clip_index < 0: # we're not getting legal clip index
-        return
-    cover_clip = track.clips[clip_index]
-    
+    if not called_from_next_clip:
+        clip_index = movemodes.selected_range_out + 1
+        blank_index = movemodes.selected_range_in
+        if clip_index < 0: # we're not getting legal clip index
+            return
+        cover_clip = track.clips[clip_index]
+    else:
+        clip_index = track.clips.index(clip) + 1
+        blank_index = clip_index - 1
+        cover_clip = track.clips[clip_index]
+        
     # Check that clip covers blank area
     total_length = 0
     for i in range(movemodes.selected_range_in,  movemodes.selected_range_out + 1):
@@ -465,4 +530,9 @@ POPUP_HANDLERS = {"set_master":syncsplitevent.init_select_master_clip,
                   "match_frame_start_monitor":_match_frame_start_monitor,
                   "match_frame_end_monitor":_match_frame_end_monitor,
                   "select_all_after": _select_all_after,
-                  "select_all_before":_select_all_before}
+                  "select_all_before":_select_all_before,
+                  "delete":_delete_clip,
+                  "lift":_lift, 
+                  "length":_set_length,
+                  "stretch_next":_stretch_next, 
+                  "stretch_prev":_stretch_prev}

@@ -61,7 +61,11 @@ EVENT_SAVED_SNAPSHOT = 5
 
 thumbnailer = None
 
-_project_properties_default_values = {"tline_shrink_vertical":False}
+_project_properties_default_values = {appconsts.P_PROP_TLINE_SHRINK_VERTICAL:False,
+                                      appconsts.P_PROP_DISSOLVE_GROUP_FADE_IN:-1,
+                                      appconsts.P_PROP_DISSOLVE_GROUP_FADE_OUT:-1,
+                                      appconsts.P_PROP_ANIM_GROUP_FADE_IN:-1,
+                                      appconsts.P_PROP_ANIM_GROUP_FADE_OUT:-1}
 
 class Project:
     """
@@ -291,7 +295,10 @@ class Project:
             try:
                 return _project_properties_default_values[property_name]
             except:
-                print "Unknown project property ", property_name
+                return None # No default values for all properties exist, action value decided at callsite in that case
+
+    def set_project_property(self, key, value):
+        self.project_properties[key] = value
 
             
 class MediaFile:

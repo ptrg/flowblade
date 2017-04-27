@@ -1129,11 +1129,7 @@ def display_clip_popup_menu(event, clip, track, callback):
     clip_menu = clip_popup_menu
     guiutils.remove_children(clip_menu)
     
-    # Menu items
-    clip_menu.add(_get_edit_menu_item(event, clip, track, callback))
-
-    _add_separetor(clip_menu)
-    
+    # Menu items    
     clip_menu.add(_get_menu_item(_("Open in Filters Editor"), callback, (clip, track, "open_in_editor", event.x)))
     # Only make opening in compositor editor for video tracks V2 and higher
     if track.id <= current_sequence().first_video_index:
@@ -1214,7 +1210,11 @@ def display_clip_popup_menu(event, clip, track, callback):
     if track.type == appconsts.VIDEO and clip.media_type != appconsts.PATTERN_PRODUCER:
         _add_separetor(clip_menu)
         clip_menu.add(_get_match_frame_menu_item(event, clip, track, callback))
-            
+
+    _add_separetor(clip_menu)
+    
+    clip_menu.add(_get_edit_menu_item(event, clip, track, callback))
+
     clip_menu.popup(None, None, None, None, event.button, event.time)
 
 
@@ -1304,7 +1304,11 @@ def display_audio_clip_popup_menu(event, clip, track, callback):
 
     _add_separetor(clip_menu)
     clip_menu.add(_get_select_menu_item(event, clip, track, callback))
+
+    _add_separetor(clip_menu)
     
+    clip_menu.add(_get_edit_menu_item(event, clip, track, callback))
+
     clip_menu.popup(None, None, None, None, event.button, event.time)
 
 def display_compositor_popup_menu(event, compositor, callback):
@@ -1479,22 +1483,21 @@ def _get_edit_menu_item(event, clip, track, callback):
     sub_menu = Gtk.Menu()
     menu_item.set_submenu(sub_menu)
 
-    del_item = _get_menu_item(_("Delete"), callback, (clip, track))
+    del_item = _get_menu_item(_("Delete"), callback, (clip, track, "delete", event.x))
     sub_menu.append(del_item)
 
-    lift_item = _get_menu_item(_("Lift"), callback, (clip, track))
+    lift_item = _get_menu_item(_("Lift"), callback, (clip, track, "lift", event.x))
     sub_menu.append(lift_item)
     
     _add_separetor(sub_menu)
 
-    length_item = _get_menu_item(_("Set Clip Length..."), callback, (clip, track))
+    length_item = _get_menu_item(_("Set Clip Length..."), callback, (clip, track, "length", event.x))
     sub_menu.append(length_item)
 
-    stretch_next_item = _get_menu_item(_("Stretch Over Next Blank"), callback, (clip, track))
+    stretch_next_item = _get_menu_item(_("Stretch Over Next Blank"), callback, (clip, track, "stretch_next", event.x))
     sub_menu.append(stretch_next_item)
 
-
-    stretch_prev_item = _get_menu_item(_("Stretch Over Prev Blank"), callback, (clip, track))
+    stretch_prev_item = _get_menu_item(_("Stretch Over Prev Blank"), callback, (clip, track, "stretch_prev", event.x))
     sub_menu.append(stretch_prev_item)
     
     menu_item.show()
@@ -2037,6 +2040,36 @@ class TracksNumbersSelect:
     def get_tracks(self):
         return (int(self.video_tracks.get_value()), int(self.audio_tracks.get_value()))
 
+
+class ClipLengthChanger:
+    def __init__(self, clip):
+        
+        self.clip = clip
+        
+        self.widget = Gtk.HBox()
+        
+        frames = clip.clip_length()
+        max_len = clip.get_length()
+        print frames, max_len
+        self.frames_label = Gtk.Label(_("Frames:"))
+        self.frames_spin = Gtk.SpinButton.new_with_range(1, max_len, 1)
+        self.frames_spin.set_value(frames)
+        self.frames_spin.connect("value-changed", self.length_changed)
+        
+        self.tc_length = Gtk.Label(utils.get_tc_string(frames))
+
+        self.widget.pack_start(self.frames_label, False, False, 0)
+        self.widget.pack_start(self.frames_spin, False, False, 0)
+        self.widget.pack_start(guiutils.pad_label(22,2), False, False, 0)
+        self.widget.pack_start(self.tc_length, False, False, 0)
+        self.widget.pack_start(Gtk.Label(), True, True, 0)
+
+    def length_changed(self, adjustment):
+        self.tc_length.set_text(utils.get_tc_string(self.frames_spin.get_value()))
+
+    def get_length(self):
+        return int(self.frames_spin.get_value())
+        
 def get_gpl3_scroll_widget(size):
     license_file = open(respaths.GPL_3_DOC)
     license_text = license_file.read()
@@ -2090,7 +2123,7 @@ def get_markers_popup_menu(event, callback):
             marker = seq.markers[i]
             name, frame = marker
             item_str  = utils.get_tc_string(frame) + " " + name
-            menu.add(_get_menu_item(_(item_str), callback, str(i) ))
+            menu.add(_get_menu_item(item_str, callback, str(i) ))
         _add_separetor(menu)
     else:
         no_markers_item = _get_menu_item(_("No Markers"), callback, "dummy", False)
@@ -2117,7 +2150,7 @@ def get_all_tracks_popup_menu(event, callback):
     menu.add(_get_menu_item(_("Activate Only Current Top Active Track"), callback, "topactiveonly" ))
     _add_separetor(menu)
     shrink_tline_item = Gtk.CheckMenuItem(_("Vertical Shrink Timeline").encode('utf-8'))
-    shrink_tline_item.set_active(PROJECT().get_project_property("tline_shrink_vertical"))
+    shrink_tline_item.set_active(PROJECT().get_project_property(appconsts.P_PROP_TLINE_SHRINK_VERTICAL))
     shrink_tline_item.show()
     shrink_tline_item.connect("toggled", callback, "shrink" )
     if len(current_sequence().tracks) == 11:
