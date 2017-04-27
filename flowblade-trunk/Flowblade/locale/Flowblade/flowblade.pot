@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-04-10 18:20+0200\n"
+"POT-Creation-Date: 2017-04-21 10:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -632,11 +632,11 @@ msgstr ""
 msgid "Window Mode"
 msgstr ""
 
-#: editorwindow.py:786 preferenceswindow.py:292
+#: editorwindow.py:786 preferenceswindow.py:334
 msgid "Single Window"
 msgstr ""
 
-#: editorwindow.py:790 preferenceswindow.py:293
+#: editorwindow.py:790 preferenceswindow.py:335
 msgid "Two Windows"
 msgstr ""
 
@@ -5082,123 +5082,155 @@ msgstr ""
 msgid "Scroll Horizontal, Control to Zoom"
 msgstr ""
 
-#: preferenceswindow.py:211
+#: preferenceswindow.py:236
 msgid "Autoplay new Clips in Clip Monitor"
 msgstr ""
 
-#: preferenceswindow.py:212
+#: preferenceswindow.py:237
 msgid "Center Current Frame on Playback Stop"
 msgstr ""
 
-#: preferenceswindow.py:213
+#: preferenceswindow.py:238
 msgid "Center Current Frame after Up/Down Arrow"
 msgstr ""
 
-#: preferenceswindow.py:214
+#: preferenceswindow.py:239
 msgid "Graphics default length:"
 msgstr ""
 
-#: preferenceswindow.py:215
+#: preferenceswindow.py:240
 msgid "Trim Modes exit on empty click"
 msgstr ""
 
-#: preferenceswindow.py:216
+#: preferenceswindow.py:241
 msgid "Quick enter Trim Modes"
 msgstr ""
 
-#: preferenceswindow.py:217
+#: preferenceswindow.py:242
 msgid "Remember Monitor Clip Frame"
 msgstr ""
 
-#: preferenceswindow.py:218
+#: preferenceswindow.py:243
 msgid "Media drag'n'drop action on non-V1 tracks"
 msgstr ""
 
-#: preferenceswindow.py:219
+#: preferenceswindow.py:244
 msgid "Cover Transition/Fade clips on delete if possible"
 msgstr ""
 
-#: preferenceswindow.py:221
+#: preferenceswindow.py:246
 msgid "Enable single Play/Pause button"
 msgstr ""
 
-#: preferenceswindow.py:222
+#: preferenceswindow.py:247
 msgid "Mouse Middle Button Scroll Action"
 msgstr ""
 
-#: preferenceswindow.py:223
+#: preferenceswindow.py:248
 msgid "Hide file extensions when importing Clips"
 msgstr ""
 
-#: preferenceswindow.py:263
-msgid "Glass"
+#: preferenceswindow.py:250
+msgid "Fast Forward / Reverse Speed for Shift Key:"
 msgstr ""
 
-#: preferenceswindow.py:264
-msgid "Simple"
+#: preferenceswindow.py:251
+msgid ""
+"Speed of Forward / Reverse will be multiplied by this value if Shift Key is "
+"held (Only using KEYS).\n"
+"Enabling multiple modifier keys will multiply the set values.\n"
+"E.g. if Shift is set to "
 msgstr ""
 
-#: preferenceswindow.py:271
-msgid "Light Theme"
+#: preferenceswindow.py:256
+msgid "Fast Forward / Reverse Speed for Control Key:"
 msgstr ""
 
-#: preferenceswindow.py:272
-msgid "Dark Theme"
+#: preferenceswindow.py:257
+msgid ""
+"Speed of Forward / Reverse will be multiplied by this value if Ctrl Key is "
+"held (Only using KEYS)."
 msgstr ""
 
-#: preferenceswindow.py:284
-msgid "Display All Levels"
+#: preferenceswindow.py:258
+msgid "Fast Forward / Reverse Speed for Caps Lock Key:"
 msgstr ""
 
-#: preferenceswindow.py:285
-msgid "Display Levels On Request"
-msgstr ""
-
-#: preferenceswindow.py:300
-msgid "Application window mode:"
-msgstr ""
-
-#: preferenceswindow.py:301
-msgid "Use English texts on localized OS"
-msgstr ""
-
-#: preferenceswindow.py:302
-msgid "Display splash screen"
-msgstr ""
-
-#: preferenceswindow.py:303
-msgid "Buttons style:"
-msgstr ""
-
-#: preferenceswindow.py:304
-msgid "Theme request, icons and colors:"
+#: preferenceswindow.py:259
+msgid ""
+"Speed of Forward / Reverse will be multiplied by this value if Caps Lock is "
+"set (Only using KEYS)."
 msgstr ""
 
 #: preferenceswindow.py:305
-msgid "Theme detection fail fallback colors:"
+msgid "Glass"
 msgstr ""
 
 #: preferenceswindow.py:306
-msgid "Default audio levels display:"
+msgid "Simple"
 msgstr ""
 
-#: preferenceswindow.py:308
-msgid "Show Full File names"
+#: preferenceswindow.py:313
+msgid "Light Theme"
+msgstr ""
+
+#: preferenceswindow.py:314
+msgid "Dark Theme"
+msgstr ""
+
+#: preferenceswindow.py:326
+msgid "Display All Levels"
+msgstr ""
+
+#: preferenceswindow.py:327
+msgid "Display Levels On Request"
+msgstr ""
+
+#: preferenceswindow.py:342
+msgid "Application window mode:"
+msgstr ""
+
+#: preferenceswindow.py:343
+msgid "Use English texts on localized OS"
+msgstr ""
+
+#: preferenceswindow.py:344
+msgid "Display splash screen"
+msgstr ""
+
+#: preferenceswindow.py:345
+msgid "Buttons style:"
+msgstr ""
+
+#: preferenceswindow.py:346
+msgid "Theme request, icons and colors:"
 msgstr ""
 
 #: preferenceswindow.py:347
-msgid "Between 1 and the number of CPU Cores"
+msgid "Theme detection fail fallback colors:"
 msgstr ""
 
 #: preferenceswindow.py:348
+msgid "Default audio levels display:"
+msgstr ""
+
+#: preferenceswindow.py:350
+msgid "Show Full File names"
+msgstr ""
+
+#: preferenceswindow.py:389
+msgid "Between 1 and the number of CPU Cores"
+msgstr ""
+
+#: preferenceswindow.py:390
 msgid "Allow Frame Dropping for real-time rendering, when needed"
 msgstr ""
 
-#: preferenceswindow.py:351
+#: preferenceswindow.py:393
 msgid "Render Threads:"
 msgstr ""
 
-#: preferenceswindow.py:352
+#: preferenceswindow.py:394
 msgid "Allow Frame Dropping"
 msgstr ""
 
