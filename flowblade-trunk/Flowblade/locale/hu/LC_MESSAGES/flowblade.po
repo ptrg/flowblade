@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-05-03 12:36+0200\n"
-"PO-Revision-Date: 2017-05-03 12:35+0100\n"
+"PO-Revision-Date: 2017-05-04 07:51+0100\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu-HU\n"
@@ -179,7 +179,7 @@ msgstr "Megnyitás..."
 
 #: projectaction.py:853
 msgid "Opening .mlt or .xml file as media was disallowed!"
-msgstr ""
+msgstr "Médiaként nem nyithatók meg .mlt vagy .xml fájlok!"
 
 #: projectaction.py:854
 msgid ""
@@ -187,6 +187,9 @@ msgid ""
 "opening MLT XML files\n"
 "it is not allowed to open these files as media."
 msgstr ""
+"Mivel az MLT jelenlegi működése közben felülírja a projekt tulajdonságait "
+"egy MLT XML megnyitásakor,\n"
+"ezért ezeket a fájlokat nem lehet médiaként megnyitni."
 
 #: projectaction.py:874
 msgid "No file was selected"
@@ -5269,6 +5272,7 @@ msgstr ""
 "Shift billentyű le van nyomva (Csak billentyűk használatakor).\n"
 "Több módosító billentyű engedélyezése a beállított értékeket is "
 "többszörözi.\n"
+"Pl.:"
 
 #: preferenceswindow.py:262
 msgid "Fast Forward / Reverse Speed for Control Key:"
@@ -6196,6 +6200,8 @@ msgid ""
 "The Clip is too short to add the user set default fades on Compositor "
 "creation."
 msgstr ""
+"A klip túl rövid a felhasználó által megadott alapértelmezett halványodás "
+"alkalmazásához egy kompozitor létrehozásakor."
 
 #~ msgid "Auto Fades"
 #~ msgstr "Automatikus halványodások"
