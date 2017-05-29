@@ -26,7 +26,6 @@ Rendering is done in app.player object of class mltplayer.Player
 """
 
 
-
 from gi.repository import Gtk
 
 import mlt
@@ -127,6 +126,26 @@ def get_args_vals_list_for_current_selections():
     
     return args_vals_list
 
+def get_current_gui_selections():
+    selections = {}
+    selections["use_user_encodings"] = widgets.render_type_panel.type_combo.get_active()
+    selections["encoding_option_index"] = widgets.encoding_panel.encoding_selector.widget.get_active()
+    selections["quality_option_index"]= widgets.encoding_panel.quality_selector.widget.get_active()
+    selections["presets_index"] = widgets.render_type_panel.presets_selector.widget.get_active()
+    selections["folder"] = widgets.file_panel.out_folder.get_current_folder()
+    selections["name"] = widgets.file_panel.movie_name.get_text()
+    selections["range"] = widgets.range_cb.get_active()
+    return selections
+
+def set_saved_gui_selections(selections):
+    widgets.render_type_panel.type_combo.set_active(selections["use_user_encodings"])
+    widgets.encoding_panel.encoding_selector.widget.set_active(selections["encoding_option_index"])
+    widgets.encoding_panel.quality_selector.widget.set_active(selections["quality_option_index"])
+    widgets.render_type_panel.presets_selector.widget.set_active(selections["presets_index"])
+    widgets.file_panel.out_folder.set_current_folder(selections["folder"])
+    widgets.file_panel.movie_name.set_text(selections["name"])
+    widgets.range_cb.set_active(selections["range"])
+    
 def get_file_path():
     folder = widgets.file_panel.out_folder.get_filenames()[0]        
     filename = widgets.file_panel.movie_name.get_text()
