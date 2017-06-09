@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-06-02 21:15+0200\n"
+"POT-Creation-Date: 2017-06-09 06:44+0200\n"
 "PO-Revision-Date: 2017-06-02 21:15+0100\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
@@ -4506,39 +4506,39 @@ msgstr "Kényszerítés"
 msgid "Align"
 msgstr "Igazítás"
 
-#: keyframeeditor.py:1550
+#: keyframeeditor.py:1541
 msgid "View:"
 msgstr "Nézet:"
 
-#: keyframeeditor.py:1556
+#: keyframeeditor.py:1547
 msgid "Large"
 msgstr "Nagy"
 
-#: keyframeeditor.py:1557
+#: keyframeeditor.py:1548
 msgid "Medium"
 msgstr "Közepes"
 
-#: keyframeeditor.py:1558
+#: keyframeeditor.py:1549
 msgid "Small"
 msgstr "Kicsi"
 
-#: keyframeeditor.py:1578
+#: keyframeeditor.py:1569
 msgid "Reset Geometry"
 msgstr "Geometria visszaállítása"
 
-#: keyframeeditor.py:1579
+#: keyframeeditor.py:1570
 msgid "Geometry to Original Aspect Ratio"
 msgstr "Geometria beállítása az eredeti méretarányra"
 
-#: keyframeeditor.py:1580
+#: keyframeeditor.py:1571
 msgid "Center Horizontal"
 msgstr "Vízszintesen középre"
 
-#: keyframeeditor.py:1581
+#: keyframeeditor.py:1572
 msgid "Center Vertical"
 msgstr "Függőlegesen középre"
 
-#: middlebar.py:127
+#: middlebar.py:128
 msgid ""
 "Zoom In - Mouse Middle Scroll\n"
 " Zoom Out - Mouse Middle Scroll\n"
@@ -4548,7 +4548,7 @@ msgstr ""
 "Kicsinyítés - Egér középső görgő\n"
 "Helykitöltés (hossz) - Egér középső kattintás"
 
-#: middlebar.py:132
+#: middlebar.py:133
 msgid ""
 "Add Rendered Transition - 2 clips selected\n"
 "Add Rendered Fade - 1 clip selected\n"
@@ -4558,7 +4558,7 @@ msgstr ""
 "Renderelt halványodás hozzáadása - 1 klip kijelölve\n"
 "Vágás - X"
 
-#: middlebar.py:138
+#: middlebar.py:139
 msgid ""
 "Splice Out - Delete\n"
 "Lift\n"
@@ -4568,7 +4568,7 @@ msgstr ""
 "Kiemelés\n"
 "Tartomány törlése"
 
-#: middlebar.py:143
+#: middlebar.py:144
 msgid ""
 "Resync Selected\n"
 "Split Audio"
@@ -4576,7 +4576,7 @@ msgstr ""
 "Kijelölt újraszinkronizálása\n"
 "Hang leválasztása"
 
-#: middlebar.py:150
+#: middlebar.py:151
 msgid ""
 "Overwrite Range\n"
 "Overwrite Clip - T\n"
@@ -4588,7 +4588,7 @@ msgstr ""
 "Klip beszúrása - Y\n"
 "Klip hozzáfűzése - U"
 
-#: middlebar.py:155
+#: middlebar.py:156
 msgid ""
 "Undo - Ctrl + Z\n"
 "Redo - Ctrl + Y"
@@ -4596,7 +4596,7 @@ msgstr ""
 "Visszavonás - Ctrl + X\n"
 "Újra - Ctrl + Y"
 
-#: middlebar.py:162
+#: middlebar.py:163
 msgid ""
 "Audio Mixer\n"
 "Titler\n"
@@ -4608,7 +4608,7 @@ msgstr ""
 "G'Mic hatások\n"
 "Kötegelt renderelés várólistája"
 
-#: middlebar.py:167
+#: middlebar.py:168
 msgid ""
 "Audio Mixer(not available)\n"
 "Titler"

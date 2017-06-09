@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-06-02 21:15+0200\n"
+"POT-Creation-Date: 2017-06-09 06:44+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4428,66 +4428,66 @@ msgstr ""
 msgid "Align"
 msgstr ""
 
-#: keyframeeditor.py:1550
+#: keyframeeditor.py:1541
 msgid "View:"
 msgstr ""
 
-#: keyframeeditor.py:1556
+#: keyframeeditor.py:1547
 msgid "Large"
 msgstr ""
 
-#: keyframeeditor.py:1557
+#: keyframeeditor.py:1548
 msgid "Medium"
 msgstr ""
 
-#: keyframeeditor.py:1558
+#: keyframeeditor.py:1549
 msgid "Small"
 msgstr ""
 
-#: keyframeeditor.py:1578
+#: keyframeeditor.py:1569
 msgid "Reset Geometry"
 msgstr ""
 
-#: keyframeeditor.py:1579
+#: keyframeeditor.py:1570
 msgid "Geometry to Original Aspect Ratio"
 msgstr ""
 
-#: keyframeeditor.py:1580
+#: keyframeeditor.py:1571
 msgid "Center Horizontal"
 msgstr ""
 
-#: keyframeeditor.py:1581
+#: keyframeeditor.py:1572
 msgid "Center Vertical"
 msgstr ""
 
-#: middlebar.py:127
+#: middlebar.py:128
 msgid ""
 "Zoom In - Mouse Middle Scroll\n"
 " Zoom Out - Mouse Middle Scroll\n"
 " Zoom Length - Mouse Middle Click"
 msgstr ""
 
-#: middlebar.py:132
+#: middlebar.py:133
 msgid ""
 "Add Rendered Transition - 2 clips selected\n"
 "Add Rendered Fade - 1 clip selected\n"
 "Cut - X"
 msgstr ""
 
-#: middlebar.py:138
+#: middlebar.py:139
 msgid ""
 "Splice Out - Delete\n"
 "Lift\n"
 "Delete Range"
 msgstr ""
 
-#: middlebar.py:143
+#: middlebar.py:144
 msgid ""
 "Resync Selected\n"
 "Split Audio"
 msgstr ""
 
-#: middlebar.py:150
+#: middlebar.py:151
 msgid ""
 "Overwrite Range\n"
 "Overwrite Clip - T\n"
@@ -4495,13 +4495,13 @@ msgid ""
 "Append Clip - U"
 msgstr ""
 
-#: middlebar.py:155
+#: middlebar.py:156
 msgid ""
 "Undo - Ctrl + Z\n"
 "Redo - Ctrl + Y"
 msgstr ""
 
-#: middlebar.py:162
+#: middlebar.py:163
 msgid ""
 "Audio Mixer\n"
 "Titler\n"
@@ -4509,7 +4509,7 @@ msgid ""
 "Batch Render Queue"
 msgstr ""
 
-#: middlebar.py:167
+#: middlebar.py:168
 msgid ""
 "Audio Mixer(not available)\n"
 "Titler"
