@@ -38,6 +38,7 @@ import gui
 import guiutils
 import mltrefhold
 import persistance
+import render
 import renderconsumer
 import sequence
 import utils
@@ -677,10 +678,13 @@ def _convert_to_proxy_project():
     editorstate.PROJECT().proxy_data.proxy_mode = appconsts.CONVERTING_TO_USE_PROXY_MEDIA
     conv_temp_project_path = utils.get_hidden_user_dir_path() + "proxy_conv.flb"
     manager_window.convert_progress_bar.set_text(_("Converting Project to Use Proxy Media"))
-
+    
+    mark_in = editorstate.PROJECT().c_seq.tractor.mark_in
+    mark_out = editorstate.PROJECT().c_seq.tractor.mark_out
+    
     persistance.save_project(editorstate.PROJECT(), conv_temp_project_path)
     global load_thread
-    load_thread = ProxyProjectLoadThread(conv_temp_project_path, manager_window.convert_progress_bar)
+    load_thread = ProxyProjectLoadThread(conv_temp_project_path, manager_window.convert_progress_bar, mark_in, mark_out)
     load_thread.start()
 
 def _convert_to_original_media_project():
@@ -688,9 +692,12 @@ def _convert_to_original_media_project():
     conv_temp_project_path = utils.get_hidden_user_dir_path() + "proxy_conv.flb"
     manager_window.convert_progress_bar.set_text(_("Converting to Use Original Media"))
 
+    mark_in = editorstate.PROJECT().c_seq.tractor.mark_in
+    mark_out = editorstate.PROJECT().c_seq.tractor.mark_out
+    
     persistance.save_project(editorstate.PROJECT(), conv_temp_project_path)
     global load_thread
-    load_thread = ProxyProjectLoadThread(conv_temp_project_path, manager_window.convert_progress_bar)
+    load_thread = ProxyProjectLoadThread(conv_temp_project_path, manager_window.convert_progress_bar, mark_in, mark_out)
     load_thread.start()
 
 def _auto_re_convert_after_proxy_render_in_proxy_mode():
@@ -744,11 +751,13 @@ def _converting_proxy_mode_done():
 
 class ProxyProjectLoadThread(threading.Thread):
 
-    def __init__(self, proxy_project_path, progressbar):
+    def __init__(self, proxy_project_path, progressbar, mark_in, mark_out):
         threading.Thread.__init__(self)
         self.proxy_project_path = proxy_project_path
         self.progressbar = progressbar
-
+        self.mark_in = mark_in
+        self.mark_out = mark_out
+    
     def run(self):
         pulse_runner = guiutils.PulseThread(self.progressbar)
         pulse_runner.start()
@@ -765,6 +774,9 @@ class ProxyProjectLoadThread(threading.Thread):
         pulse_runner.running = False
         time.sleep(0.3) # need to be sure pulse_runner has stopped
         
+        project.c_seq.tractor.mark_in = self.mark_in
+        project.c_seq.tractor.mark_out = self.mark_out
+    
         app.stop_autosave()
 
         Gdk.threads_enter()
@@ -784,6 +796,9 @@ class ProxyProjectLoadThread(threading.Thread):
         persistance.show_messages = True
 
         Gdk.threads_enter()
+        selections = project.get_project_property(appconsts.P_PROP_LAST_RENDER_SELECTIONS)
+        if selections != None:
+            render.set_saved_gui_selections(selections)
         _converting_proxy_mode_done()
         Gdk.threads_leave()
 
