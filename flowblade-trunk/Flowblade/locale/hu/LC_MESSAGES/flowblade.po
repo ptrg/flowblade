@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-01 20:55+0200\n"
-"PO-Revision-Date: 2017-08-01 21:01+0200\n"
+"POT-Creation-Date: 2017-08-03 17:55+0300\n"
+"PO-Revision-Date: 2017-03-24 08:40+0100\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu_HU\n"
@@ -451,7 +451,8 @@ msgstr "Sávok számának megváltoztatása a jelenetben..."
 msgid "Watermark..."
 msgstr "Vízjel..."
 
-#: editorwindow.py:201
+#: editorwindow.py:201 diskcachemanagement.py:145
+#, fuzzy
 msgid "Disk Cache Manager"
 msgstr "Merevlemez gyorsítótár kezelő"
 
@@ -471,7 +472,7 @@ msgstr "Nézet"
 msgid "Fullscreen"
 msgstr "Teljes képernyő"
 
-#: editorwindow.py:206 editorwindow.py:538
+#: editorwindow.py:206 editorwindow.py:536
 msgid "Project"
 msgstr "Projekt"
 
@@ -520,127 +521,120 @@ msgid "Sequence"
 msgstr "Jelenet"
 
 #: editorwindow.py:218
-msgid "Media Audio Sync"
-msgstr ""
-
-#: editorwindow.py:219
-msgid "Create Audio Sync Group"
-msgstr ""
-
-#: editorwindow.py:220
+#, fuzzy
 msgid "Create Audio Sync Merge Clip"
 msgstr ""
 
-#: editorwindow.py:221
+#: editorwindow.py:219
 msgid "Import Media From Project..."
 msgstr "Média importálása projektből..."
 
-#: editorwindow.py:222
+#: editorwindow.py:220
 msgid "Import Sequence..."
 msgstr "Képsorozat importálása..."
 
-#: editorwindow.py:223 dialogs.py:1210 dialogs.py:1230
+#: editorwindow.py:221 dialogs.py:1210 dialogs.py:1230
 msgid "Log Marked Clip Range"
 msgstr "A kijelölt kliptartomány megjegyzése"
 
-#: editorwindow.py:224
+#: editorwindow.py:222
 msgid "Recreate Media Icons..."
 msgstr "Média ikonok ismételt létrehozása..."
 
-#: editorwindow.py:225
+#: editorwindow.py:223
 msgid "Remove Unused Media..."
 msgstr "Nem használt média eltávolítása..."
 
-#: editorwindow.py:226
+#: editorwindow.py:224
 msgid "JACK Audio..."
 msgstr "JACK hangrendszer..."
 
-#: editorwindow.py:227
+#: editorwindow.py:225
 msgid "Change Project Profile..."
 msgstr "Projekt profiljának megváltoztatása..."
 
-#: editorwindow.py:228 proxyediting.py:218
+#: editorwindow.py:226 proxyediting.py:218
 msgid "Proxy Manager"
 msgstr "Helyettesítés kezelő"
 
-#: editorwindow.py:229
+#: editorwindow.py:227
 msgid "Project Info"
 msgstr "Projekt adatai"
 
-#: editorwindow.py:230 editorwindow.py:539 rendergui.py:172 rendergui.py:320
+#: editorwindow.py:228 editorwindow.py:537 rendergui.py:172 rendergui.py:320
 #: tools/batchrendering.py:865 tools/gmic.py:771
 msgid "Render"
 msgstr "Renderelés"
 
-#: editorwindow.py:231
+#: editorwindow.py:229
 msgid "Add To Batch Render Queue..."
 msgstr "Hozzáadás a kötegelt renderelés várólistájához..."
 
-#: editorwindow.py:232
+#: editorwindow.py:230
 msgid "Batch Render Queue"
 msgstr "Kötegelt renderelés várólistája"
 
-#: editorwindow.py:233
+#: editorwindow.py:231
 msgid "Render Timeline"
 msgstr "Idővonal renderelése"
 
-#: editorwindow.py:234 dialogs.py:1265
+#: editorwindow.py:232 dialogs.py:1265
 msgid "Tools"
 msgstr "Eszközök"
 
-#: editorwindow.py:235 tools/titler.py:189
+#: editorwindow.py:233 tools/titler.py:189
 msgid "Titler"
 msgstr "Feliratozó"
 
-#: editorwindow.py:236
+#: editorwindow.py:234
 msgid "Audio Mixer"
 msgstr "Hangkeverő"
 
-#: editorwindow.py:237 tools/gmic.py:831
+#: editorwindow.py:235 tools/gmic.py:831 toolsintegration.py:124
 msgid "G'MIC Effects"
 msgstr "G'Mic hatások"
 
-#: editorwindow.py:238 medialinker.py:178
+#: editorwindow.py:236 medialinker.py:178
 msgid "Media Relinker"
 msgstr "Média újracsatoló"
 
-#: editorwindow.py:239
+#: editorwindow.py:237
 msgid "_Help"
 msgstr "_Súgó"
 
-#: editorwindow.py:240
+#: editorwindow.py:238
 msgid "Contents"
 msgstr "Tartalom"
 
-#: editorwindow.py:241 dialogs.py:569
+#: editorwindow.py:239 dialogs.py:569
 msgid "Runtime Environment"
 msgstr "Futási környezet"
 
-#: editorwindow.py:242 dialogs.py:1195
+#: editorwindow.py:240 dialogs.py:1195
 msgid "Keyboard Shortcuts"
 msgstr "Gyorsbillentyűk"
 
-#: editorwindow.py:243 dialogs.py:438
+#: editorwindow.py:241 dialogs.py:438
 msgid "About"
 msgstr "Névjegy"
 
-#: editorwindow.py:531
+#: editorwindow.py:529
 msgid "Media"
 msgstr "Média"
 
-#: editorwindow.py:535
+#: editorwindow.py:533
 msgid "Range Log"
 msgstr "Tartományok"
 
-#: editorwindow.py:536
+#: editorwindow.py:534
 msgid "Filters"
 msgstr "Szűrők"
 
-#: editorwindow.py:537
+#: editorwindow.py:535
 msgid "Compositors"
 msgstr "Kompozitorok"
 
-#: editorwindow.py:554
+#: editorwindow.py:552
 msgid ""
 "Prev Frame - Arrow Left\n"
 "Next Frame - Arrow Right\n"
@@ -662,119 +656,119 @@ msgstr ""
 "\"A\" jelzőhöz\n"
 "\"B\" jelzőhöz"
 
-#: editorwindow.py:783
+#: editorwindow.py:781
 msgid "Window Mode"
 msgstr "Ablakmód"
 
-#: editorwindow.py:786 preferenceswindow.py:340
+#: editorwindow.py:784 preferenceswindow.py:340
 msgid "Single Window"
 msgstr "Egy ablak"
 
-#: editorwindow.py:790 preferenceswindow.py:341
+#: editorwindow.py:788 preferenceswindow.py:341
 msgid "Two Windows"
 msgstr "Két ablak"
 
-#: editorwindow.py:805
+#: editorwindow.py:803
 msgid "Middlebar Layout"
 msgstr "Középső eszköztár elrendezése"
 
-#: editorwindow.py:808
+#: editorwindow.py:806
 msgid "Timecode Left"
 msgstr "Időkód a bal oldalon"
 
-#: editorwindow.py:813
+#: editorwindow.py:811
 msgid "Timecode Center"
 msgstr "Időkód középen"
 
-#: editorwindow.py:817
+#: editorwindow.py:815
 msgid "Components Centered"
 msgstr "Elemek középen"
 
-#: editorwindow.py:831
+#: editorwindow.py:829
 msgid "Tabs Position"
 msgstr "Fülek elhelyezése"
 
-#: editorwindow.py:834
+#: editorwindow.py:832
 msgid "Up"
 msgstr "Fel"
 
-#: editorwindow.py:838
+#: editorwindow.py:836
 msgid "Down"
 msgstr "Le"
 
-#: editorwindow.py:853
+#: editorwindow.py:851
 msgid "Show Monitor Sequence Profile"
 msgstr "Monitoron lévő jelenet profiljának megjelenítése"
 
-#: editorwindow.py:858
+#: editorwindow.py:856
 msgid "Show Master Volume Meter"
 msgstr "Főhangerő kijelzőjének megjelenítése"
 
-#: editorwindow.py:866
+#: editorwindow.py:864
 msgid "Monitor Playback Interpolation"
 msgstr "Interpoláció módja a lejátszó monitoron"
 
-#: editorwindow.py:870
+#: editorwindow.py:868
 msgid "Nearest Neighbour (fast)"
 msgstr "Legközelebbi szomszéd (leggyorsabb)"
 
-#: editorwindow.py:874
+#: editorwindow.py:872
 msgid "Bilinear (good)"
 msgstr "Bilineáris (jó)"
 
-#: editorwindow.py:878
+#: editorwindow.py:876
 msgid "Bicubic (better)"
 msgstr "Bikubikus (jobb)"
 
-#: editorwindow.py:883
+#: editorwindow.py:881
 msgid "Hyper/Lanczos (best)"
 msgstr "Hyper/Lanczos (legjobb)"
 
-#: editorwindow.py:893 dialogs.py:1211
+#: editorwindow.py:891 dialogs.py:1211
 msgid "Zoom In"
 msgstr "Nagyítás"
 
-#: editorwindow.py:896 dialogs.py:1212
+#: editorwindow.py:894 dialogs.py:1212
 msgid "Zoom Out"
 msgstr "Kicsinyítés"
 
-#: editorwindow.py:899
+#: editorwindow.py:897
 msgid "Zoom Fit"
 msgstr "Helykitöltés"
 
-#: editorwindow.py:916
+#: editorwindow.py:914
 msgid "Global Window Mode changed"
 msgstr "A globális ablakmód megváltozott"
 
-#: editorwindow.py:917
+#: editorwindow.py:915
 msgid "Application restart required for the new layout choice to take effect."
 msgstr "Újraindítás szükséges az új elrendezés életbe léptetéséhez."
 
-#: editorwindow.py:1028
+#: editorwindow.py:1026
 msgid "Timeline current frame timecode"
 msgstr "Az aktuális képkocka időkódja az idővonalon"
 
-#: editorwindow.py:1030
+#: editorwindow.py:1028
 msgid "Select view mode: Video/Vectorscope/RGBParade"
 msgstr "Megjelenítési mód váltása: Videó / Vektorszkóp / RGB Parádé"
 
-#: editorwindow.py:1032
+#: editorwindow.py:1030
 msgid "Monitor Sequence/Media current frame timecode"
 msgstr "A monitoron lévő jelenet/média képkockájának aktuális időkódja"
 
-#: editorwindow.py:1033
+#: editorwindow.py:1031
 msgid "Current Monitor Sequence/Media name"
 msgstr "A jelenleg monitoron lévő jelenet/média neve"
 
-#: editorwindow.py:1035
+#: editorwindow.py:1033
 msgid "Monitor Sequence/Media current position"
 msgstr "A monitoron lévő jelenet/média aktuális időkódja"
 
-#: editorwindow.py:1037
+#: editorwindow.py:1035
 msgid "Display Current Sequence on Timeline"
 msgstr "Aktuális jelenet megjelenítése az idővonalon"
 
-#: editorwindow.py:1038
+#: editorwindow.py:1036
 msgid "Display Monitor Clip"
 msgstr "A monitoron lévő klip megjelenítése"
 
@@ -857,12 +851,12 @@ msgstr "Új projekt"
 #: dialogs.py:375 dialogs.py:406 dialogs.py:428 dialogs.py:809 dialogs.py:904
 #: dialogs.py:937 dialogs.py:958 dialogs.py:999 dialogs.py:1027 dialogs.py:1055
 #: dialogs.py:1116 dialogs.py:1155 dialogs.py:1169 dialogs.py:1183
-#: dialogs.py:1365 dialogs.py:1482 dialogs.py:1530 propertyeditorbuilder.py:406
-#: propertyeditorbuilder.py:519 rendergui.py:48 rendergui.py:103
-#: rendergui.py:117 rendergui.py:134 rendergui.py:1053 preferenceswindow.py:47
-#: tools/batchrendering.py:962 proxyediting.py:431 patternproducer.py:319
-#: patternproducer.py:352 patternproducer.py:383 tools/gmic.py:357
-#: tools/gmic.py:381 tools/gmic.py:511
+#: dialogs.py:1365 dialogs.py:1482 dialogs.py:1530 dialogs.py:1645
+#: propertyeditorbuilder.py:406 propertyeditorbuilder.py:519 rendergui.py:48
+#: rendergui.py:103 rendergui.py:117 rendergui.py:134 rendergui.py:1053
+#: preferenceswindow.py:47 tools/batchrendering.py:962 proxyediting.py:431
+#: patternproducer.py:319 patternproducer.py:352 patternproducer.py:383
+#: tools/gmic.py:357 tools/gmic.py:381 tools/gmic.py:511
 msgid "Cancel"
 msgstr "Mégsem"
 
@@ -1406,6 +1400,7 @@ msgstr "Halványodás hozzáadása"
 
 #: dialogs.py:1198 dialogs.py:1318 tools/titler.py:514 proxyediting.py:422
 #: medialinker.py:154 tools/gmic.py:802 tools/gmic.py:893
+#: diskcachemanagement.py:147
 msgid "Close"
 msgstr "Bezárás"
 
@@ -1896,6 +1891,25 @@ msgstr "Eltűnés hozzáadása létrehozáskor"
 msgid "Group Auto Fades"
 msgstr "Csoport automatikus halványodása"
 
+#: dialogs.py:1643
+#, fuzzy
+msgid "Timeline Audio Sync"
+msgstr "Hang leválasztása szinkronizálva"
+
+#: dialogs.py:1646
+#, fuzzy
+msgid "Do Audio Sync Move Edit"
+msgstr "Ising klip létrehozása"
+
+#: dialogs.py:1662
+msgid "To audio sync clips you need move action origin clip by "
+msgstr ""
+
+#: dialogs.py:1662
+#, fuzzy
+msgid " frames."
+msgstr "képkocka"
+
 #: editevent.py:227
 msgid "Can't put an audio clip on a video track."
 msgstr "Hangklipet nem lehet videosávra helyezni."
@@ -2013,8 +2027,9 @@ msgid "Clear Waveform"
 msgstr "Hanghullám törlése"
 
 #: guicomponents.py:1170
+#, fuzzy
 msgid "Select Clip to Audio Sync With..."
-msgstr ""
+msgstr "Hang leválasztása szinkronizálva"
 
 #: guicomponents.py:1177 guicomponents.py:1279
 msgid "Clear Sync Relation"
@@ -2101,6 +2116,7 @@ msgid "Edit"
 msgstr "Szerkesztés"
 
 #: guicomponents.py:1517
+#, fuzzy
 msgid "Set Clip Length..."
 msgstr "Klip hosszának beállítása..."
 
@@ -2183,6 +2199,7 @@ msgid "Render Slow/Fast Motion File"
 msgstr "Lassított/Gyorsított mozgású fájl renderelése"
 
 #: guicomponents.py:1644
+#, fuzzy
 msgid "Render Reverse Motion File"
 msgstr "Fordított mozgásirányú fájl renderelése"
 
@@ -2280,6 +2297,7 @@ msgid "Number of Tracks:"
 msgstr "Sávok száma:"
 
 #: guicomponents.py:2127
+#, fuzzy
 msgid "Frames:"
 msgstr "Képkockák:"
 
@@ -2320,6 +2338,7 @@ msgid "Activate Only Current Top Active Track"
 msgstr "Csak a legfelső aktív sáv legyen aktiválva"
 
 #: guicomponents.py:2225
+#, fuzzy
 msgid "Vertical Shrink Timeline"
 msgstr "Idővonal függőleges összehúzása"
 
@@ -5368,6 +5387,7 @@ msgid "Allow Frame Dropping"
 msgstr "Képkockák eldobásának engedélyezése"
 
 #: preferenceswindow.py:438
+#, fuzzy
 msgid "Shortcuts File"
 msgstr "Gyorsbillentyűk beállítási fájlja"
 
@@ -5695,11 +5715,11 @@ msgstr "Projekt átalakítása helyettesítő média használatához"
 msgid "Converting to Use Original Media"
 msgstr "Átalakítás az eredeti média használatához"
 
-#: tlineaction.py:201
+#: tlineaction.py:209
 msgid "Fade/Transition cover delete failed!"
 msgstr "A halványodás/átmenet fedvény törlése nem sikerült!"
 
-#: tlineaction.py:202
+#: tlineaction.py:210
 msgid ""
 "There wasn't enough material available in adjacent clips.\n"
 "A normal Splice Out was done instead."
@@ -5707,19 +5727,20 @@ msgstr ""
 "Nem volt elegendő anyag a szomszédos klipben.\n"
 "Normál \"kidoobás\" művelet lett végrehajtva."
 
-#: tlineaction.py:335
+#: tlineaction.py:343
 msgid "No Clips are selected!"
 msgstr "Nincsenek kiválasztva klipek!"
 
-#: tlineaction.py:336
+#: tlineaction.py:344
 msgid "You need to select clips to overwrite to perform this edit."
 msgstr "A művelet végrehajtásához ki kell jelölnie a felülírandó klipeket."
 
-#: tlineaction.py:454 tlineaction.py:1026
+#: tlineaction.py:462 tlineaction.py:1034
+#, fuzzy
 msgid "3 point edit not defined!"
 msgstr "3 pontos szerkesztés tartománya nincs meghatározva!"
 
-#: tlineaction.py:455 tlineaction.py:479
+#: tlineaction.py:463 tlineaction.py:487
 msgid ""
 "You need to set Timeline Range using Mark In and Mark Out buttons\n"
 "to perform this edit."
@@ -5727,15 +5748,15 @@ msgstr ""
 "Ezen szerkesztési  művelethez ki kell jelölni egy tartományt az\n"
 "idővonalon az \"A jelző\" és a \"B jelző\" gombokkal."
 
-#: tlineaction.py:478
+#: tlineaction.py:486
 msgid "Timeline Range not set!"
 msgstr "Nincs kijelölve tartomány az idővonalon!"
 
-#: tlineaction.py:511
+#: tlineaction.py:519
 msgid "Origin clip not found!"
 msgstr "A kiinduló klip nem található!"
 
-#: tlineaction.py:512
+#: tlineaction.py:520
 msgid ""
 "Clip used to create this Compositor has been removed\n"
 "or moved to different track."
@@ -5743,11 +5764,11 @@ msgstr ""
 "A klip amelyhez ez a kompozitor tartozik törölve lett\n"
 "vagy már egy másik sávon van."
 
-#: tlineaction.py:802 tlineaction.py:975
+#: tlineaction.py:810 tlineaction.py:983
 msgid "Rendering "
 msgstr "Renderelés"
 
-#: tlineaction.py:834
+#: tlineaction.py:842
 msgid ""
 "To create a rendered transition you need enough media overlap from both clips!\n"
 "\n"
@@ -5755,51 +5776,51 @@ msgstr ""
 "Egy átmenet elkészítéséhez elegendő hosszúságú átfedő médiára van szükség mindkét klipből!\n"
 "\n"
 
-#: tlineaction.py:839
+#: tlineaction.py:847
 msgid "<b>FIRST CLIP MEDIA OVERLAP:</b>  "
 msgstr "<b>ELSŐ MÉDIA KLIP ÁTFEDÉSE:</b> "
 
-#: tlineaction.py:840 tlineaction.py:848
+#: tlineaction.py:848 tlineaction.py:856
 msgid "Available <b>"
 msgstr "Elérhető: <b>"
 
-#: tlineaction.py:840 tlineaction.py:848
+#: tlineaction.py:848 tlineaction.py:856
 msgid "</b> frame(s), "
 msgstr "</b> képkocka, "
 
-#: tlineaction.py:841 tlineaction.py:849
+#: tlineaction.py:849 tlineaction.py:857
 msgid "Required <b>"
 msgstr "Szükséges: <b>"
 
-#: tlineaction.py:841
+#: tlineaction.py:849
 msgid "</b> frame(s)"
 msgstr "</b> képkocka"
 
-#: tlineaction.py:847
+#: tlineaction.py:855
 msgid "<b>SECOND CLIP MEDIA OVERLAP:</b> "
 msgstr "<b>MÁSODIK MÉDIA KLIP ÁTFEDÉSE:</b> "
 
-#: tlineaction.py:849
+#: tlineaction.py:857
 msgid "</b> frame(s) "
 msgstr "</b> képkocka "
 
-#: tlineaction.py:856
+#: tlineaction.py:864
 msgid "Current situation, not enought media overlap:"
 msgstr "Jelenleg nincs elég átfedés a médiák között:"
 
-#: tlineaction.py:858
+#: tlineaction.py:866
 msgid "You need more media overlap:"
 msgstr "Hosszabb média átfedésre van szükség:"
 
-#: tlineaction.py:887
+#: tlineaction.py:895
 msgid "More media overlap needed to create transition!"
 msgstr "Hosszabb média átfedésre van szükség az átmenet létrehozásához!"
 
-#: tlineaction.py:906
+#: tlineaction.py:914
 msgid "Only Video Track mix / fades available"
 msgstr "Csak videosávok keverése / halványítása lehetséges"
 
-#: tlineaction.py:907
+#: tlineaction.py:915
 msgid ""
 "Unfortunately rendered mixes and fades can currently\n"
 "only be applied on clips on Video Tracks."
@@ -5807,7 +5828,7 @@ msgstr ""
 "Sajnos a renderelt keverések és halványodások jelenleg\n"
 "csak videosávokon található klipekre alkalmazhatók."
 
-#: tlineaction.py:944
+#: tlineaction.py:952
 msgid ""
 "Clip is too short for the requested fade:\n"
 "\n"
@@ -5815,39 +5836,44 @@ msgstr ""
 "A klip túl rövid a kért halványodáshoz:\n"
 "\n"
 
-#: tlineaction.py:945
+#: tlineaction.py:953
 msgid "<b>Clip Length:</b> "
 msgstr "<b>Klip hossza:</b> "
 
-#: tlineaction.py:945 tlineaction.py:946
+#: tlineaction.py:953 tlineaction.py:954
 msgid " frame(s)\n"
 msgstr " képkocka\n"
 
-#: tlineaction.py:946
+#: tlineaction.py:954
 msgid "<b>Fade Length:</b> "
 msgstr "<b>Halványodás hossza:</b>"
 
-#: tlineaction.py:947
+#: tlineaction.py:955
 msgid "Clip is too short!"
 msgstr "A klip túl rövid!"
 
-#: tlineaction.py:1016
+#: tlineaction.py:1024
 msgid "No Clip loaded into Monitor"
 msgstr "Nincs klip a monitoron"
 
-#: tlineaction.py:1017
+#: tlineaction.py:1025
 msgid "Can't do the requested edit because there is no Clip in Monitor."
 msgstr "A kért szerkesztési művelet nem hajtható végre mert nincs klip a monitoron"
 
-#: tlineaction.py:1021
+#: tlineaction.py:1029
 msgid "Defined range in Monitor Clip is too short"
 msgstr "A monitoron lévő klip megadott tartománya túl rövid."
 
-#: tlineaction.py:1022
-msgid "Can't do the requested edit because Mark In -> Mark Out Range or Clip is too short."
-msgstr "Ez a szerkesztési művelet nem hajtható végre, mert az \"A\" és \"B\" jelzők közötti tartomány vagy a klip túl rövid."
+#: tlineaction.py:1030
+msgid ""
+"Can't do the requested edit because Mark In -> Mark Out Range or Clip is too "
+"short."
+msgstr ""
+"Ez a szerkesztési művelet nem hajtható végre, mert az \"A\" és \"B\" jelzők "
+"közötti tartomány vagy a klip túl rövid."
 
-#: tlineaction.py:1027
+#: tlineaction.py:1035
+#, fuzzy
 msgid ""
 "You need to set Mark In and Mark Out on Timeline or Clip and\n"
 "additional Mark In on Timeline or Clip to perform this edit."
@@ -6170,5 +6196,144 @@ msgid "Clip too short for Auto Fades!"
 msgstr "A klip túl rövid az automatikus halványodáshoz!"
 
 #: compositorfades.py:280
-msgid "The Clip is too short to add the user set default fades on Compositor creation."
-msgstr "A klip túl rövid a felhasználó által megadott alapértelmezett halványodás alkalmazásához egy kompozitor létrehozásakor."
+msgid ""
+"The Clip is too short to add the user set default fades on Compositor "
+"creation."
+msgstr ""
+
+#: audiosync.py:171
+#, fuzzy
+msgid "Audio Sync parent clips must be on differnt tracks "
+msgstr "Az igazítás alapklipjének a V1 sávon kell lennie"
+
+#: audiosync.py:172
+msgid ""
+"Selected audio sync clip is on the sametrack as the sync action origin clip."
+msgstr ""
+
+#: audiosync.py:206
+msgid "Audio sync move not possible"
+msgstr ""
+
+#: audiosync.py:207
+#, fuzzy
+msgid "Clip starts "
+msgstr "A klip túl rövid!"
+
+#: audiosync.py:207
+msgid ""
+" frames before timeline start if it is moved \n"
+"to be in audio sync with the specified clip.\n"
+"\n"
+msgstr ""
+
+#: audiosync.py:208
+msgid ""
+"You need to move forward or shorten the clips in question to make the "
+"operation succeed."
+msgstr ""
+
+#: audiosync.py:275
+msgid "SYNC_CLIP_"
+msgstr ""
+
+#: audiosync.py:276
+#, fuzzy
+msgid "Save Sync Compound Clip XML"
+msgstr "Képsorozatból álló klip hozzáadása"
+
+#: diskcachemanagement.py:44
+msgid "Destroy data"
+msgstr ""
+
+#: diskcachemanagement.py:68
+msgid ""
+"Destroying this data may change contents of existing\n"
+"projects and make some projects unopenable."
+msgstr ""
+
+#: diskcachemanagement.py:98
+msgid " MB"
+msgstr ""
+
+#: diskcachemanagement.py:100
+msgid " kB"
+msgstr ""
+
+#: diskcachemanagement.py:110
+msgid "Confirm Destroying Cached Data!"
+msgstr ""
+
+#: diskcachemanagement.py:112
+msgid ""
+"Destroying this data may <b>change contents</b> of existing\n"
+"projects or <b>make some projects unopenable!</b>"
+msgstr ""
+
+#: diskcachemanagement.py:114
+msgid ""
+"You can use 'File->Save Backup Snapshot...' functionality to backup "
+"projects\n"
+"so that they can be opened later before destroying this data."
+msgstr ""
+
+#: diskcachemanagement.py:116
+msgid "Destroying this data may require parts of it to be recreated later."
+msgstr ""
+
+#: diskcachemanagement.py:167
+#, fuzzy
+msgid "Audio Levels Data"
+msgstr "Hang szintjének megjelenítése"
+
+#: diskcachemanagement.py:168
+msgid "G'Mic Tool Session Data"
+msgstr ""
+
+#: diskcachemanagement.py:169
+msgid "Natron Clip Export Data"
+msgstr ""
+
+#: diskcachemanagement.py:170
+#, fuzzy
+msgid "Rendered Files"
+msgstr "Fájl renderelése"
+
+#: diskcachemanagement.py:171
+#, fuzzy
+msgid "Thumbnails"
+msgstr "Bélyegképek mappája:"
+
+#: diskcachemanagement.py:172
+#, fuzzy
+msgid "User Created Custom Profiles"
+msgstr "Felhasználói profil létrehozása"
+
+#: toolsintegration.py:132
+msgid "Natron"
+msgstr ""
+
+#: toolsintegration.py:161
+#, fuzzy
+msgid "Slow/Fast Motion"
+msgstr "Lassított/Gyorsított mozgású fájl renderelése"
+
+#: toolsintegration.py:174
+#, fuzzy
+msgid "Reverse"
+msgstr "Visszhang idő"
+
+#, fuzzy
+#~ msgid "3 point edit not defoned!"
+#~ msgstr "Renderelendő tartomány nincs meghatározva!"
+
+#, fuzzy
+#~ msgid "Auto Fades"
+#~ msgstr "Halványodás hozzáadása"
+
+#~ msgid "and contributors"
+#~ msgstr "és a közreműködők"
+
+#, fuzzy
+#~ msgid "MLT"
+#~ msgstr "MLT XML"

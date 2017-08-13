@@ -668,6 +668,13 @@ def draw_overwrite_box_overlay(cr, data):
         cr.line_to(draw_x, draw_y + size)
         cr.close_path()
         cr.fill()
+
+        if editorpersistance.prefs.delta_overlay == True:
+            delta = data["delta"]       
+            tc_str = utils.get_tc_string_short(abs(delta))
+            tc_str = _get_signed_tc_str(tc_str, delta)
+                
+            _draw_text_info_box(cr, x, y - 12, tc_str)
         
 def _draw_move_overlay(cr, data, y):
     # Get data
@@ -678,7 +685,8 @@ def _draw_move_overlay(cr, data, y):
     track_height = data["to_track_object"].height
 
     # Get first frame for drawing shadow clips
-    draw_start = first_clip_start + (current_frame - press_frame)
+    delta = current_frame - press_frame
+    draw_start = first_clip_start + delta
     clip_start_frame = draw_start - pos
         
     # Draw clips in draw range
@@ -694,6 +702,14 @@ def _draw_move_overlay(cr, data, y):
         
         # Start frame for next clip
         clip_start_frame += clip_length
+
+    if editorpersistance.prefs.delta_overlay == True:
+        x = (draw_start - pos) * pix_per_frame
+        
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, x, y - 12, tc_str)
 
 def draw_multi_overlay(cr, data):
     if data == None:
@@ -764,7 +780,13 @@ def draw_multi_overlay(cr, data):
 
     y = _get_track_y(current_sequence().first_video_index)
     _draw_snap(cr, y)
-    
+
+    if editorpersistance.prefs.delta_overlay == True:        
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, draw_x, y - 12, tc_str)
+        
 def draw_two_roll_overlay(cr, data):
     edit_frame = data["edit_frame"]
     frame_x = _get_frame_x(edit_frame)
@@ -830,6 +852,16 @@ def draw_two_roll_overlay(cr, data):
     _draw_kb_trim_indicator(cr, selection_frame_x, track_y)
     _draw_snap(cr, track_y)
 
+    _draw_kb_trim_indicator(cr, selection_frame_x, track_y)
+    _draw_snap(cr, track_y)
+
+    if editorpersistance.prefs.delta_overlay == True:
+        delta = data["selected_frame"] - data["edit_frame"]        
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, selection_frame_x + 3, track_y - 12, tc_str)
+        
 def draw_one_roll_overlay(cr, data):
     track_height = current_sequence().tracks[data["track"]].height
     track_y = _get_track_y(data["track"])
@@ -891,7 +923,14 @@ def draw_one_roll_overlay(cr, data):
 
     _draw_kb_trim_indicator(cr, selection_frame_x, track_y)
     _draw_snap(cr, track_y)
-    
+
+    if editorpersistance.prefs.delta_overlay == True:
+        delta = data["selected_frame"] - data["edit_frame"]        
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, selection_frame_x + 3, track_y - 12, tc_str)
+        
 def draw_one_roll_overlay_ripple(cr, data):
     # Trim overlay
     draw_one_roll_overlay(cr, data)
@@ -1007,7 +1046,14 @@ def draw_slide_overlay(cr, data):
     cr.paint()
 
     _draw_kb_trim_indicator(cr, x, track_y)
-    
+
+    if editorpersistance.prefs.delta_overlay == True:
+        delta = data["mouse_delta"]  
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, clip_start_frame_x + 3, track_y - 12, tc_str)
+        
 def draw_clip_end_drag_overlay(cr, data):
     if data["editing_clip_end"] == True:
         end = data["frame"]  - pos
@@ -1031,7 +1077,20 @@ def draw_clip_end_drag_overlay(cr, data):
     cr.stroke()
 
     _draw_snap(cr, y)
-    
+
+    if editorpersistance.prefs.delta_overlay == True:
+        if data["editing_clip_end"] == True:
+            x = scale_in + scale_length
+            delta = data["frame"] - data["orig_out"]
+        else:
+            x = scale_in
+            delta = data["frame"] - data["orig_in"]  - 1
+            
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+
+        _draw_text_info_box(cr, x - 3, y - 12, tc_str)
+        
 def draw_compositor_move_overlay(cr, data):
     # Get data
     press_frame = data["press_frame"]
@@ -1057,6 +1116,13 @@ def draw_compositor_move_overlay(cr, data):
 
     _draw_snap(cr, y)
 
+    if editorpersistance.prefs.delta_overlay == True:
+        delta = current_frame - press_frame
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, scale_in, y - 12, tc_str)
+        
 def draw_compositor_trim(cr, data):
     clip_in = data["clip_in"]
     clip_out = data["clip_out"]
@@ -1079,12 +1145,23 @@ def draw_compositor_trim(cr, data):
     
     if data["trim_is_clip_in"] == True:
         x = scale_in + 2
+        delta = data["clip_in"] - data["orig_clip_in"]
+        info_x = scale_in - 3
     else:
         x = scale_in + scale_length - 26
+        delta = data["clip_out"] - data["orig_clip_out"]
+        info_x = scale_in + + scale_length - 3
+
     _draw_two_arrows(cr, x, y + 4, 4)
 
     _draw_snap(cr, y)
-    
+
+    if editorpersistance.prefs.delta_overlay == True:
+        tc_str = utils.get_tc_string_short(abs(delta))
+        tc_str = _get_signed_tc_str(tc_str, delta)
+            
+        _draw_text_info_box(cr, info_x, y - 12, tc_str)
+        
 def _create_compositor_cairo_path(cr, scale_in, scale_length, y, target_y):
     scale_in = int(scale_in) + 0.5
     scale_length = int(scale_length)
@@ -1181,6 +1258,44 @@ def _draw_kb_trim_indicator(cr, x, y):
         cr.set_source_surface(KEYBOARD_ICON, int(x) - 9, int(y) - 16)
         cr.paint()
 
+def _draw_text_info_box(cr, x, y, text):
+    x = int(x)
+    y = int(y)
+    cr.set_source_rgb(1, 1, 1)
+    cr.select_font_face ("sans-serif",
+                     cairo.FONT_SLANT_NORMAL,
+                     cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(13)
+
+    x_bearing, y_bearing, width, height, x_advance, y_advance = cr.text_extents(text)
+    
+    x1 = x - 3.5
+    y1 = y + 4.5
+    x2 = x + width + 5.5
+    y2 = y - height - 4.5
+    
+    cr.move_to(x1, y1)
+    cr.line_to(x1, y2)
+    cr.line_to(x2, y2)
+    cr.line_to(x2, y1)
+    cr.close_path()
+    cr.set_source_rgb(0.1, 0.1, 0.1)
+    cr.fill_preserve()
+    
+    cr.set_line_width(1.0)
+    cr.set_source_rgb(0.7, 0.7, 0.7)
+    cr.stroke()
+    
+    cr.move_to(x, y)
+    cr.set_source_rgb(0.8, 0.8, 0.8)
+    cr.show_text(text) 
+
+def _get_signed_tc_str(tc_str, delta):
+    if delta < 0:
+        tc_str = "-" + tc_str
+    elif  delta > 0:
+        tc_str = "+" + tc_str
+    return tc_str
 
 # ------------------------------- WIDGETS
 class TimeLineCanvas:
