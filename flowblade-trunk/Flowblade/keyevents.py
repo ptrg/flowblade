@@ -242,7 +242,7 @@ def _handle_tline_key_event(event):
     if action == 'toggle_ripple':
         gui.editor_window.toggle_trim_ripple_mode()
         return True
-
+    
     # Key bindings for keyboard trimming
     if editorstate.current_is_active_trim_mode() == True:
         if action == 'prev_frame':
@@ -289,6 +289,7 @@ def _handle_tline_key_event(event):
                 seek_amount = -1
             else:
                 seek_amount = 1
+                
             if (event.get_state() & Gdk.ModifierType.SHIFT_MASK):
                 seek_amount = seek_amount * prefs.ffwd_rev_shift
             if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
@@ -479,7 +480,7 @@ def _handle_clip_key_event(event):
         # Available: SHIFT_MASK LOCK_MASK CONTROL_MASK
         
         prefs = editorpersistance.prefs
-        if action == 'prev_frame' or action == 'right_frame':
+        if action == 'prev_frame' or action == 'next_frame':
             if action == 'prev_frame':
                 seek_amount = -1
             else:

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-08-03 17:55+0300\n"
-"PO-Revision-Date: 2017-03-24 08:40+0100\n"
+"PO-Revision-Date: 2017-08-13 16:10+0200\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu_HU\n"
@@ -452,7 +452,6 @@ msgid "Watermark..."
 msgstr "Vízjel..."
 
 #: editorwindow.py:201 diskcachemanagement.py:145
-#, fuzzy
 msgid "Disk Cache Manager"
 msgstr "Merevlemez gyorsítótár kezelő"
 
@@ -521,7 +520,6 @@ msgid "Sequence"
 msgstr "Jelenet"
 
 #: editorwindow.py:218
-#, fuzzy
 msgid "Create Audio Sync Merge Clip"
 msgstr ""
 
@@ -1892,23 +1890,20 @@ msgid "Group Auto Fades"
 msgstr "Csoport automatikus halványodása"
 
 #: dialogs.py:1643
-#, fuzzy
 msgid "Timeline Audio Sync"
-msgstr "Hang leválasztása szinkronizálva"
+msgstr ""
 
 #: dialogs.py:1646
-#, fuzzy
 msgid "Do Audio Sync Move Edit"
-msgstr "Ising klip létrehozása"
-
-#: dialogs.py:1662
-msgid "To audio sync clips you need move action origin clip by "
 msgstr ""
 
 #: dialogs.py:1662
-#, fuzzy
+msgid "To audio sync clips you need move action origin clip by "
+msgstr "A klipek hangjának igazításához az eredeti klipet el kell mozdítani, az elmozdítás "
+
+#: dialogs.py:1662
 msgid " frames."
-msgstr "képkocka"
+msgstr " képkocka."
 
 #: editevent.py:227
 msgid "Can't put an audio clip on a video track."
@@ -2027,9 +2022,8 @@ msgid "Clear Waveform"
 msgstr "Hanghullám törlése"
 
 #: guicomponents.py:1170
-#, fuzzy
 msgid "Select Clip to Audio Sync With..."
-msgstr "Hang leválasztása szinkronizálva"
+msgstr "Válassza ki a klipet, amelyhez a hangot kell igazítani..."
 
 #: guicomponents.py:1177 guicomponents.py:1279
 msgid "Clear Sync Relation"
@@ -2116,7 +2110,6 @@ msgid "Edit"
 msgstr "Szerkesztés"
 
 #: guicomponents.py:1517
-#, fuzzy
 msgid "Set Clip Length..."
 msgstr "Klip hosszának beállítása..."
 
@@ -2199,7 +2192,6 @@ msgid "Render Slow/Fast Motion File"
 msgstr "Lassított/Gyorsított mozgású fájl renderelése"
 
 #: guicomponents.py:1644
-#, fuzzy
 msgid "Render Reverse Motion File"
 msgstr "Fordított mozgásirányú fájl renderelése"
 
@@ -2297,7 +2289,6 @@ msgid "Number of Tracks:"
 msgstr "Sávok száma:"
 
 #: guicomponents.py:2127
-#, fuzzy
 msgid "Frames:"
 msgstr "Képkockák:"
 
@@ -2338,7 +2329,6 @@ msgid "Activate Only Current Top Active Track"
 msgstr "Csak a legfelső aktív sáv legyen aktiválva"
 
 #: guicomponents.py:2225
-#, fuzzy
 msgid "Vertical Shrink Timeline"
 msgstr "Idővonal függőleges összehúzása"
 
@@ -5387,7 +5377,6 @@ msgid "Allow Frame Dropping"
 msgstr "Képkockák eldobásának engedélyezése"
 
 #: preferenceswindow.py:438
-#, fuzzy
 msgid "Shortcuts File"
 msgstr "Gyorsbillentyűk beállítási fájlja"
 
@@ -5736,7 +5725,6 @@ msgid "You need to select clips to overwrite to perform this edit."
 msgstr "A művelet végrehajtásához ki kell jelölnie a felülírandó klipeket."
 
 #: tlineaction.py:462 tlineaction.py:1034
-#, fuzzy
 msgid "3 point edit not defined!"
 msgstr "3 pontos szerkesztés tartománya nincs meghatározva!"
 
@@ -5865,15 +5853,10 @@ msgid "Defined range in Monitor Clip is too short"
 msgstr "A monitoron lévő klip megadott tartománya túl rövid."
 
 #: tlineaction.py:1030
-msgid ""
-"Can't do the requested edit because Mark In -> Mark Out Range or Clip is too "
-"short."
-msgstr ""
-"Ez a szerkesztési művelet nem hajtható végre, mert az \"A\" és \"B\" jelzők "
-"közötti tartomány vagy a klip túl rövid."
+msgid "Can't do the requested edit because Mark In -> Mark Out Range or Clip is too short."
+msgstr "Ez a szerkesztési művelet nem hajtható végre, mert az \"A\" és \"B\" jelzők közötti tartomány vagy a klip túl rövid."
 
 #: tlineaction.py:1035
-#, fuzzy
 msgid ""
 "You need to set Mark In and Mark Out on Timeline or Clip and\n"
 "additional Mark In on Timeline or Clip to perform this edit."
@@ -6196,19 +6179,15 @@ msgid "Clip too short for Auto Fades!"
 msgstr "A klip túl rövid az automatikus halványodáshoz!"
 
 #: compositorfades.py:280
-msgid ""
-"The Clip is too short to add the user set default fades on Compositor "
-"creation."
+msgid "The Clip is too short to add the user set default fades on Compositor creation."
 msgstr ""
 
 #: audiosync.py:171
-#, fuzzy
 msgid "Audio Sync parent clips must be on differnt tracks "
-msgstr "Az igazítás alapklipjének a V1 sávon kell lennie"
+msgstr ""
 
 #: audiosync.py:172
-msgid ""
-"Selected audio sync clip is on the sametrack as the sync action origin clip."
+msgid "Selected audio sync clip is on the sametrack as the sync action origin clip."
 msgstr ""
 
 #: audiosync.py:206
@@ -6216,9 +6195,8 @@ msgid "Audio sync move not possible"
 msgstr ""
 
 #: audiosync.py:207
-#, fuzzy
 msgid "Clip starts "
-msgstr "A klip túl rövid!"
+msgstr "A klip kezdete "
 
 #: audiosync.py:207
 msgid ""
@@ -6226,25 +6204,24 @@ msgid ""
 "to be in audio sync with the specified clip.\n"
 "\n"
 msgstr ""
+" képkockával az idővonal elé kerül ha el lesz mozgatva,\n"
+"hogy a hang igazítva legyen a megadott kliphez.\n"
 
 #: audiosync.py:208
-msgid ""
-"You need to move forward or shorten the clips in question to make the "
-"operation succeed."
+msgid "You need to move forward or shorten the clips in question to make the operation succeed."
 msgstr ""
 
 #: audiosync.py:275
 msgid "SYNC_CLIP_"
-msgstr ""
+msgstr "IGAZITOTT_KLIP_"
 
 #: audiosync.py:276
-#, fuzzy
 msgid "Save Sync Compound Clip XML"
-msgstr "Képsorozatból álló klip hozzáadása"
+msgstr ""
 
 #: diskcachemanagement.py:44
 msgid "Destroy data"
-msgstr ""
+msgstr "Adatok megsemmisítése"
 
 #: diskcachemanagement.py:68
 msgid ""
@@ -6254,15 +6231,15 @@ msgstr ""
 
 #: diskcachemanagement.py:98
 msgid " MB"
-msgstr ""
+msgstr " MB"
 
 #: diskcachemanagement.py:100
 msgid " kB"
-msgstr ""
+msgstr " kB"
 
 #: diskcachemanagement.py:110
 msgid "Confirm Destroying Cached Data!"
-msgstr ""
+msgstr "Jóvá kell hagyni a gyorsítótárazott adatok megsemmisítését."
 
 #: diskcachemanagement.py:112
 msgid ""
@@ -6272,56 +6249,49 @@ msgstr ""
 
 #: diskcachemanagement.py:114
 msgid ""
-"You can use 'File->Save Backup Snapshot...' functionality to backup "
-"projects\n"
+"You can use 'File->Save Backup Snapshot...' functionality to backup projects\n"
 "so that they can be opened later before destroying this data."
 msgstr ""
 
 #: diskcachemanagement.py:116
 msgid "Destroying this data may require parts of it to be recreated later."
-msgstr ""
+msgstr "Ezen adatok megsemmisítése után egyes részeinek ismételt létrehozására lehet majd szükség."
 
 #: diskcachemanagement.py:167
-#, fuzzy
 msgid "Audio Levels Data"
-msgstr "Hang szintjének megjelenítése"
+msgstr "Hangszintek adata"
 
 #: diskcachemanagement.py:168
 msgid "G'Mic Tool Session Data"
-msgstr ""
+msgstr "G'Mic eszköz munkamenet adatai"
 
 #: diskcachemanagement.py:169
 msgid "Natron Clip Export Data"
-msgstr ""
+msgstr "Natron klip adatok exportálása"
 
 #: diskcachemanagement.py:170
-#, fuzzy
 msgid "Rendered Files"
-msgstr "Fájl renderelése"
+msgstr "Renderelt fájlok"
 
 #: diskcachemanagement.py:171
-#, fuzzy
 msgid "Thumbnails"
-msgstr "Bélyegképek mappája:"
+msgstr "Bélyegképek"
 
 #: diskcachemanagement.py:172
-#, fuzzy
 msgid "User Created Custom Profiles"
-msgstr "Felhasználói profil létrehozása"
+msgstr "Felhasználó által létrehozott egyéni profilok"
 
 #: toolsintegration.py:132
 msgid "Natron"
-msgstr ""
+msgstr "Natron"
 
 #: toolsintegration.py:161
-#, fuzzy
 msgid "Slow/Fast Motion"
-msgstr "Lassított/Gyorsított mozgású fájl renderelése"
+msgstr "Lassított/Gyorsított mozgás"
 
 #: toolsintegration.py:174
-#, fuzzy
 msgid "Reverse"
-msgstr "Visszhang idő"
+msgstr "Visszafelé"
 
 #, fuzzy
 #~ msgid "3 point edit not defoned!"
