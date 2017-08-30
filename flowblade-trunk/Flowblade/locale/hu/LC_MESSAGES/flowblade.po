@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-08-03 17:55+0300\n"
-"PO-Revision-Date: 2017-08-13 16:10+0200\n"
+"PO-Revision-Date: 2017-08-16 14:09+0200\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu_HU\n"
@@ -6209,7 +6209,7 @@ msgstr ""
 
 #: audiosync.py:208
 msgid "You need to move forward or shorten the clips in question to make the operation succeed."
-msgstr ""
+msgstr "A művelet sikeres végrehajtásához a kérdéses klipek előbbre mozgatása vagy lerövidítése szükséges."
 
 #: audiosync.py:275
 msgid "SYNC_CLIP_"
@@ -6228,6 +6228,8 @@ msgid ""
 "Destroying this data may change contents of existing\n"
 "projects and make some projects unopenable."
 msgstr ""
+"Ezen adatok megsemmisítése megváltoztathatja már létező projektek\n"
+"tartalmát és megnyithatatlanná teheti némelyiküket."
 
 #: diskcachemanagement.py:98
 msgid " MB"
@@ -6246,6 +6248,8 @@ msgid ""
 "Destroying this data may <b>change contents</b> of existing\n"
 "projects or <b>make some projects unopenable!</b>"
 msgstr ""
+"Ezen adatok megsemmisítése <b>megváltoztathatja</b> már létező projektek\n"
+"tartalmát és <b>megnyithatatlanná teheti</b> némelyiküket."
 
 #: diskcachemanagement.py:114
 msgid ""
