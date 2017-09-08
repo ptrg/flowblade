@@ -213,11 +213,11 @@ class EditorWindow:
             ('CreateIsingClip', None, _('Ising'), None, None, lambda a:patternproducer.create_icing_clip()),
             ('CreateColorPulseClip', None, _('Color Pulse'), None, None, lambda a:patternproducer.create_color_pulse_clip()),
             ('CompoundClipsMenu', None, _('Create Compound Clip')),
-            ('CreateSelectionCompound', None, _('Selection'), None, None, lambda a:projectaction.create_selection_compound_clip()),
-            ('CreateSequenceCompound', None, _('Sequence'), None, None, lambda a:projectaction.create_sequence_compound_clip()),
-            ('AudioSyncCompoundClip', None, _('Create Audio Sync Merge Clip'), None, None, lambda a:audiosync.create_audio_sync_compound_clip()),
+            ('CreateSelectionCompound', None, _('From Selected Clips'), None, None, lambda a:projectaction.create_selection_compound_clip()),
+            ('CreateSequenceCompound', None, _('From Current Sequence'), None, None, lambda a:projectaction.create_sequence_compound_clip()),
+            ('AudioSyncCompoundClip', None, _('Audio Sync Merge Clip From 2 Media Items '), None, None, lambda a:audiosync.create_audio_sync_compound_clip()),
             ('ImportProjectMedia', None, _('Import Media From Project...'), None, None, lambda a:projectaction.import_project_media()),
-            ('CombineSequences', None, _('Import Sequence...'), None, None, lambda a:projectaction.combine_sequences()),
+            ('CombineSequences', None, _('Import Another Sequence Into This Sequence...'), None, None, lambda a:projectaction.combine_sequences()),
             ('LogClipRange', None, _('Log Marked Clip Range'), '<control>L', None, lambda a:medialog.log_range_clicked()),
             ('RecreateMediaIcons', None, _('Recreate Media Icons...'), None, None, lambda a:menuactions.recreate_media_file_icons()),
             ('RemoveUnusedMedia', None, _('Remove Unused Media...'), None, None, lambda a:projectaction.remove_unused_media()),
@@ -237,7 +237,7 @@ class EditorWindow:
             ('HelpMenu', None, _('_Help')),
             ('QuickReference', None, _('Contents'), None, None, lambda a:menuactions.quick_reference()),
             ('Environment', None, _('Runtime Environment'), None, None, lambda a:menuactions.environment()),
-            ('KeyboardShortcuts', None, _('Keyboard Shortcuts'), None, None, lambda a:dialogs.keyboard_shortcuts_dialog(self.window)),
+            ('KeyboardShortcuts', None, _('Keyboard Shortcuts'), None, None, lambda a:dialogs.keyboard_shortcuts_dialog(self.window, menuactions.keyboard_shortcuts_callback)),
             ('About', None, _('About'), None, None, lambda a:menuactions.about()),
             ('InsertMode', None, None, '1', None, lambda a:_this_is_not_used()),
             ('OverMode', None, None, '2', None, lambda a:_this_is_not_used()),
@@ -304,6 +304,7 @@ class EditorWindow:
                     <separator/>
                     <menuitem action='ProfilesManager'/>
                     <menuitem action='DiskCacheManager'/>
+                    <menuitem action='KeyboardShortcuts'/>
                     <menuitem action='Preferences'/>
                 </menu>
                 <menu action='ViewMenu'>
@@ -322,9 +323,9 @@ class EditorWindow:
                     </menu>
                     <menu action='CompoundClipsMenu'>
                         <menuitem action='CreateSelectionCompound'/>
-                        <menuitem action='CreateSequenceCompound'/>  
+                        <menuitem action='CreateSequenceCompound'/>
+                        <menuitem action='AudioSyncCompoundClip'/>
                     </menu>
-                    <menuitem action='AudioSyncCompoundClip'/>
                     <separator/>
                     <menuitem action='ImportProjectMedia'/>
                     <menuitem action='CombineSequences'/>
@@ -354,7 +355,6 @@ class EditorWindow:
                 </menu>
                 <menu action='HelpMenu'>
                     <menuitem action='QuickReference'/>
-                    <menuitem action='KeyboardShortcuts'/>
                     <menuitem action='Environment'/>
                     <separator/>
                     <menuitem action='About'/>
