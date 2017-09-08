@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-09-08 16:02+0300\n"
-"PO-Revision-Date: 2017-03-24 08:40+0100\n"
+"PO-Revision-Date: 2017-09-08 19:10+0200\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu_HU\n"
@@ -538,7 +538,7 @@ msgstr "Média importálása projektből..."
 
 #: editorwindow.py:220
 msgid "Import Another Sequence Into This Sequence..."
-msgstr ""
+msgstr "Másik jelenet importálása ebbe a jelenetbe..."
 
 #: editorwindow.py:221 dialogs.py:1280 shortcuts.py:190
 msgid "Log Marked Clip Range"
@@ -1409,7 +1409,7 @@ msgstr "Létező gyorsbillentyűk:"
 
 #: dialogs.py:1206
 msgid "Diffence to 'Flowblade Default' Presets:"
-msgstr ""
+msgstr "Eltérések a 'Flowblade Default' beállításaitól:"
 
 #: dialogs.py:1271
 msgid "Control + N"
@@ -1756,7 +1756,7 @@ msgstr "Áttűnés, vegyítés"
 
 #: dialogs.py:1596
 msgid "Affine Blend,  Picture-In-Picture, Region"
-msgstr ""
+msgstr "Összetett vegyítés, Kép a képben, Terület"
 
 #: dialogs.py:1601
 msgid "Compositor Auto Fades Group"
@@ -1801,7 +1801,7 @@ msgstr ""
 
 #: dialogs.py:1712
 msgid "To audio sync clips you need move action origin clip by "
-msgstr ""
+msgstr "A klipek hangjának igazításához az eredeti klipet el kell mozdítani, az elmozdítás "
 
 #: editevent.py:227
 msgid "Can't put an audio clip on a video track."
@@ -2236,7 +2236,7 @@ msgstr "Média klipek bélyegképeinek megjelenítése"
 
 #: guicomponents.py:2266
 msgid "Show Move/Trim Info Overlay"
-msgstr ""
+msgstr "Mozgatás/Vágás információinak megjelenítése"
 
 #: guicomponents.py:2275
 msgid "Snapping On"
@@ -5279,7 +5279,8 @@ msgstr "Teljes fájlnevek megjelenítése"
 #: preferenceswindow.py:395
 msgid "Changing these values may cause problems with playback and rendering.\n"
 "The safe values are Render Threads:1, Allow Frame Dropping: No."
-msgstr ""
+msgstr "Ezen értékek megváltoztatása problémákat okozhat lejátszás vagy renderelés közben.\n"
+"A biztonságos értékek a következők: Renderelés szálai: 1;  Képkockák eldobásának engedélyezése: nem"
 
 #: preferenceswindow.py:406
 msgid "Between 1 and the number of CPU Cores"
@@ -6099,7 +6100,7 @@ msgstr "A klip túl rövid az automatikus halványodáshoz!"
 
 #: compositorfades.py:280
 msgid "The Clip is too short to add the user set default fades on Compositor creation."
-msgstr ""
+msgstr "A klip túl rövid a felhasználó által megadott alapértelmezett halványodás alkalmazásához egy kompozitor létrehozásakor."
 
 #: audiosync.py:171
 msgid "Audio Sync parent clips must be on differnt tracks "
@@ -6169,7 +6170,8 @@ msgstr "Ezen adatok megsemmisítése <b>megváltoztathatja</b> már létező pro
 #: diskcachemanagement.py:114
 msgid "You can use 'File->Save Backup Snapshot...' functionality to backup projects\n"
 "so that they can be opened later before destroying this data."
-msgstr ""
+msgstr "A 'Fájl->Állapot mentése...' menüponttal biztonsági másolat készíthető a projektről\n"
+"az adatok megsemmisítése előtt, így az később újra megnyitható lesz."
 
 #: diskcachemanagement.py:116
 msgid "Destroying this data may require parts of it to be recreated later."
@@ -6268,7 +6270,6 @@ msgid "Go To End"
 msgstr "Ugrás a végére"
 
 #: shortcuts.py:195
-#, fuzzy
 msgid "3 Point Overwrite"
 msgstr "Három pontos felülírás"
 
@@ -6289,7 +6290,6 @@ msgid "SPACE"
 msgstr "Szóköz"
 
 #: shortcuts.py:221
-#, fuzzy
 msgid "Left Arrow"
 msgstr "Balra nyíl"
 
@@ -6303,33 +6303,31 @@ msgstr "END"
 
 #: shortcuts.py:237
 msgid "Key Pad END"
-msgstr ""
+msgstr "Számbillentyűzet: END"
 
 #: shortcuts.py:238
 msgid "Key Pad 1"
-msgstr ""
+msgstr "Számbillentyűzet: 1"
 
 #: shortcuts.py:240 shortcuts.py:243 shortcuts.py:244
 msgid "Key Pad 2"
-msgstr ""
+msgstr "Számbillentyűzet: 2"
 
 #: shortcuts.py:241
-#, fuzzy
 msgid "Key Pad Down Arrow"
-msgstr "Lefelé nyíl"
+msgstr "Számbillentyűzet: Lefelé nyíl"
 
 #: shortcuts.py:246
 msgid "Key Pad 4"
-msgstr ""
+msgstr "Számbillentyűzet: 4"
 
 #: shortcuts.py:247
-#, fuzzy
 msgid "Key Pad Left Arrow"
-msgstr "Balra nyíl"
+msgstr "Számbillentyűzet: Balra nyíl"
 
 #: shortcuts.py:249
 msgid "Key Pad 5"
-msgstr ""
+msgstr "Számbillentyűzet: 5"
 
 #: shortcuts.py:250
 msgid "Key Pad Begin"
@@ -6337,20 +6335,19 @@ msgstr ""
 
 #: shortcuts.py:252
 msgid "Key Pad 6"
-msgstr ""
+msgstr "Számbillentyűzet: 6"
 
 #: shortcuts.py:253
-#, fuzzy
 msgid "Key Pad Right Arrow"
-msgstr "Jobbra nyíl"
+msgstr "Számbillentyűzet: Jobbra nyíl"
 
 #: shortcuts.py:255
 msgid "Key Pad 7"
-msgstr ""
+msgstr "Számbillentyűzet: 7"
 
 #: shortcuts.py:256
 msgid "Key Pad HOME"
-msgstr ""
+msgstr "Számbillentyűzet: HOME"
 
 #: shortcuts.py:259
 msgid "TAB"
@@ -6362,22 +6359,19 @@ msgstr "ENTER"
 
 #: shortcuts.py:262
 msgid "="
-msgstr ""
+msgstr "="
 
 #: shortcuts.py:264
-#, fuzzy
 msgid "Alt"
-msgstr "Alt + I"
+msgstr "Alt"
 
 #: shortcuts.py:266
-#, fuzzy
 msgid "Alt + Shift"
-msgstr "Alt + I"
+msgstr "Alt + Shift"
 
 #: shortcuts.py:267
-#, fuzzy
 msgid "Control"
-msgstr "Ctrl + N"
+msgstr "Ctrl"
 
 #~ msgid "Outline"
 #~ msgstr "Körvonal"
