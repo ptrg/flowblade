@@ -334,7 +334,7 @@ def main(root_path):
             print "Launch assoc file:", assoc_file_path
             global assoc_timeout_id
             assoc_timeout_id = GObject.timeout_add(10, open_assoc_file)
-        
+       
     # Launch gtk+ main loop
     Gtk.main()
 
@@ -566,7 +566,6 @@ def open_project(new_project):
     audiowaveform.frames_cache = {}
 
     editorstate.project = new_project
-
     editorstate.media_view_filter = appconsts.SHOW_ALL_FILES
     
     # Inits widgets with project data
