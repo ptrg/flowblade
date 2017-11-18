@@ -458,7 +458,7 @@ class Sequence:
         clip.clip_length = lambda: _clip_length(clip) # MLT get_length gives wrong values for blanks
         clip.waveform_data = None
         clip.color = None # None means that clip type default color is displayed
-
+        
     def clone_track_clip(self, track, index):
         orig_clip = track.clips[index]
         return self.create_clone_clip(orig_clip)
@@ -576,6 +576,7 @@ class Sequence:
         compositor.clone_properties(old_compositor)
         compositor.set_in_and_out(old_compositor.clip_in, old_compositor.clip_out)
         compositor.transition.set_tracks(old_compositor.transition.a_track, old_compositor.transition.b_track)
+        compositor.obey_autofollow = old_compositor.obey_autofollow
         self._plant_compositor(compositor)
         return compositor
     

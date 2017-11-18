@@ -169,7 +169,7 @@ def init_module():
         name, comp_type = fade
         name_for_type[comp_type] = name
         
-    # change this, tuples are not need we only need list of translatd names
+    # Tuples are not really needed we only need list of translated names
     rendered_transitions = [  (_("Dissolve"), RENDERED_DISSOLVE), 
                               (_("Wipe"), RENDERED_WIPE),
                               (_("Color Dip"), RENDERED_COLOR_DIP),
@@ -288,7 +288,6 @@ class CompositorTransition:
         self.mlt_transition.set("a_track", str(a_track))
         self.mlt_transition.set("b_track", str(b_track))
 
-
     def set_target_track(self, a_track, force_track):
         self.a_track = a_track
         self.mlt_transition.set("a_track", str(a_track))
@@ -323,7 +322,8 @@ class CompositorObject:
         self.name = None # ducktyping as clip for property editors
         self.selected = False
         self.origin_clip_id = None
-        
+        self.obey_autofollow = True
+    
         self.destroy_id = os.urandom(16) # HACK, HACK, HACK - find a way to remove this stuff  
                                          # Compositors are recreated often in Sequence.restack_compositors()
                                          # and cannot be destroyd in undo/redo with object identidy.

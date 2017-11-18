@@ -38,6 +38,7 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 
 import appconsts
+import atomicfile
 import editorstate
 import editorpersistance
 import mltprofiles
@@ -194,8 +195,9 @@ def save_project(project, file_path, changed_profile_desc=None):
     remove_attrs(s_proj, PROJECT_REMOVE)
 
     # Write out file.
-    write_file = file(file_path, "wb")
-    pickle.dump(s_proj, write_file)
+    with atomicfile.AtomicFileWriter(file_path, "wb") as afw:
+        write_file = afw.get_file()
+        pickle.dump(s_proj, write_file)
 
 def get_p_sequence(sequence):
     """
@@ -376,9 +378,9 @@ def _save_changed_xml_file(s_media_file, new_profile):
     uuid_str = md5.new(str(os.urandom(32))).hexdigest()
     new_xml_file_path = folder + "/"+ uuid_str + ".xml"
 
-    new_xml_file = open(new_xml_file_path, "w")
-    new_xml_file.write(new_xml_text)
-    new_xml_file.close()
+    with atomicfile.AtomicFileWriter(new_xml_file_path, "w") as afw:
+        new_xml_file = afw.get_file()
+        new_xml_file.write(new_xml_text)
     
     return new_xml_file_path
 
@@ -499,6 +501,9 @@ def fill_sequence_mlt(seq, SAVEFILE_VERSION):
             if SAVEFILE_VERSION < 3:
                 FIX_N_TO_3_COMPOSITOR_COMPABILITY(py_compositor, SAVEFILE_VERSION)
         
+            if not hasattr(py_compositor, "obey_autofollow"): # "obey_autofollow" attr was added for 1.16
+                py_compositor.obey_autofollow = True
+                
             # Create new compositor object
             compositor = mlttransitions.create_compositor(py_compositor.type_id)                                        
             compositor.create_mlt_objects(seq.profile)
@@ -511,6 +516,8 @@ def fill_sequence_mlt(seq, SAVEFILE_VERSION):
             compositor.transition.set_tracks(py_compositor.transition.a_track, py_compositor.transition.b_track)
             compositor.set_in_and_out(py_compositor.clip_in, py_compositor.clip_out)
             compositor.origin_clip_id = py_compositor.origin_clip_id
+            print py_compositor.obey_autofollow
+            compositor.obey_autofollow = py_compositor.obey_autofollow
            
             mlt_compositors.append(compositor)
 

@@ -44,6 +44,11 @@ MULTI_MOVE = 10
 CLIP_END_DRAG = 11
 SELECT_TLINE_SYNC_CLIP = 12
 
+
+# SDL version based on MLT version
+SDL_1 = 1
+SDL_2 = 2
+
 # Project being edited
 project = None
 
@@ -52,6 +57,9 @@ player = None
 
 # Current edit mode
 edit_mode = INSERT_MOVE
+
+# Compositor autofollow state. If true when edit is performed, all compositors are auto resynced on first do, redo and undo actions.
+auto_follow = True
 
 # Trim tool ripple mode is expressed as a flag
 trim_mode_ripple = False
@@ -163,6 +171,9 @@ def EDIT_MODE():
 def MONITOR_MEDIA_FILE():
     return _monitor_media_file
 
+def auto_follow_active():
+    return auto_follow
+
 def get_track(index):
     return project.c_seq.tracks[index]
 
@@ -180,6 +191,21 @@ def mlt_version_is_equal_or_greater(test_version):
     
     return False
 
+def mlt_version_is_equal_or_greater_correct(test_version):
+    runtime_ver = mlt_version.split(".")
+    test_ver = test_version.split(".")
+    
+    if runtime_ver[0] > test_ver[0]:
+        return True
+    elif runtime_ver[0] == test_ver[0]:
+        if runtime_ver[1] > test_ver[1]:
+            return True
+        elif runtime_ver[1] == test_ver[1]:
+            if  runtime_ver[2] >  test_ver[2]:
+                return True
+    
+    return False
+    
 def set_copy_paste_objects(objs):
     global _copy_paste_objects
     _copy_paste_objects = objs
@@ -220,3 +246,12 @@ def add_cached_trim_clip(clip):
 def clear_trim_clip_cache():
     global _trim_clips_cache
     _trim_clips_cache = {}
+
+def get_sdl_version():
+    if mlt_version_is_equal_or_greater_correct("6.4.2") == True:
+        return SDL_2
+    else:
+        return SDL_1
+    
+        
+         
