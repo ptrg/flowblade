@@ -60,6 +60,7 @@ edit_mode = INSERT_MOVE
 
 # Compositor autofollow state. If true when edit is performed, all compositors are auto resynced on first do, redo and undo actions.
 auto_follow = True
+auto_follow_compositors_mouse_transparent = False
 
 # Trim tool ripple mode is expressed as a flag
 trim_mode_ripple = False
@@ -102,8 +103,9 @@ audio_monitoring_available = False
 # Whether to let the user set their user_dir using XDG Base dir spec
 use_xdg = False
 
-# Cursor pos
+# Cursor position and sensitivity
 cursor_on_tline = False
+cursor_is_tline_sensitive = True
 
 # Flag for running JACK audio server. If this is on when SDLConsumer created in mltplayer.py
 # jack rack filter will bw taached to it
@@ -123,7 +125,7 @@ fullscreen = False
 # Trim view mode
 show_trim_view = appconsts.TRIM_VIEW_OFF
 
-# Remember fade and transition lengths
+# Remember fade and transition lengths for next invocation, users prefer this over one default value
 fade_length = -1
 transition_length = -1
 

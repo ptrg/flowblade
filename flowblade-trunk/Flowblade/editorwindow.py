@@ -138,6 +138,16 @@ class EditorWindow:
         ONEROLL_TOOL = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "oneroll_tool.png")
         OVERWRITE_TOOL =  cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "overwrite_tool.png")
 
+        # Context cursors 
+        self.context_cursors = {appconsts.POINTER_CONTEXT_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 3, 7),
+                                appconsts.POINTER_CONTEXT_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 14, 7),
+                                appconsts.POINTER_CONTEXT_TRIM_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_left.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_TRIM_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_trim_right.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_BOX_SIDEWAYS:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_MOVE:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 9, 9)}
+
         # Window
         self.window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
         self.window.set_icon_from_file(respaths.IMAGE_PATH + "flowbladeappicon.png")
@@ -228,6 +238,7 @@ class EditorWindow:
             ('RenderMenu', None, _('Render')),
             ('AddToQueue', None, _('Add To Batch Render Queue...'), None, None, lambda a:projectaction.add_to_render_queue()),
             ('BatchRender', None, _('Batch Render Queue'), None, None, lambda a:batchrendering.launch_batch_rendering()),
+            ('ReRenderTransitionsFades', None, _('Rerender All Rendered Transitions And Fades '), None, None, lambda a:tlineaction.rerender_all_rendered_transitions_and_fades()),
             ('Render', None, _('Render Timeline'), None, None, lambda a:projectaction.do_rendering()),
             ('ToolsMenu', None, _('Tools')),
             ('Titler', None, _('Titler'), None, None, lambda a:titler.show_titler()),
@@ -341,6 +352,8 @@ class EditorWindow:
                 <menu action='RenderMenu'>
                     <menuitem action='AddToQueue'/>
                     <menuitem action='BatchRender'/>
+                    <separator/>
+                    <menuitem action='ReRenderTransitionsFades'/>
                     <separator/>
                     <menuitem action='Render'/>
                 </menu>
@@ -1125,12 +1138,12 @@ class EditorWindow:
             else:
                 cursor = self.get_own_cursor(display, OVERWRITE_BOX_CURSOR, 6, 15)
         elif mode == editorstate.TWO_ROLL_TRIM:
-            cursor = self.get_own_cursor(display, TWOROLL_CURSOR, 11, 9)
+            cursor = self.get_own_cursor(display, TWOROLL_NO_EDIT_CURSOR, 11, 9) 
         elif mode == editorstate.TWO_ROLL_TRIM_NO_EDIT:
             cursor = self.get_own_cursor(display, TWOROLL_NO_EDIT_CURSOR, 11, 9)
         elif mode == editorstate.ONE_ROLL_TRIM:
             if editorstate.trim_mode_ripple == False:
-                cursor = self.get_own_cursor(display, ONEROLL_CURSOR, 9, 9)
+                cursor = self.get_own_cursor(display, ONEROLL_NO_EDIT_CURSOR, 9, 9)
             else:
                 cursor = self.get_own_cursor(display, ONEROLL_RIPPLE_CURSOR, 9, 9)
         elif mode == editorstate.ONE_ROLL_TRIM_NO_EDIT:
@@ -1139,7 +1152,7 @@ class EditorWindow:
             else:
                 cursor = self.get_own_cursor(display, ONEROLL_RIPPLE_CURSOR, 9, 9)
         elif mode == editorstate.SLIDE_TRIM:
-            cursor = self.get_own_cursor(display, SLIDE_CURSOR, 9, 9)
+            cursor = self.get_own_cursor(display, SLIDE_NO_EDIT_CURSOR, 9, 9)
         elif mode == editorstate.SLIDE_TRIM_NO_EDIT:
             cursor = self.get_own_cursor(display, SLIDE_NO_EDIT_CURSOR, 9, 9)
         elif mode == editorstate.SELECT_PARENT_CLIP:
@@ -1149,12 +1162,22 @@ class EditorWindow:
         elif mode == editorstate.MULTI_MOVE:
             cursor = self.get_own_cursor(display, MULTIMOVE_CURSOR, 4, 8)
         elif mode == editorstate.CLIP_END_DRAG:
-            cursor = Gdk.Cursor.new(Gdk.CursorType.SB_H_DOUBLE_ARROW)
+            surface, px, py = self.context_cursors[tlinewidgets.pointer_context]
+            cursor = self.get_own_cursor(display, surface, px, py)
+            #cursor = Gdk.Cursor.new(Gdk.CursorType.SB_H_DOUBLE_ARROW)
         else:
             cursor = Gdk.Cursor.new(Gdk.CursorType.LEFT_PTR)
         
         gdk_window.set_cursor(cursor)  
-            
+
+    def set_tline_cursor_to_context(self, pointer_context):
+        display = Gdk.Display.get_default()
+        gdk_window = self.window.get_window()
+        
+        surface, px, py = self.context_cursors[pointer_context]
+        cursor = self.get_own_cursor(display, surface, px, py)
+        gdk_window.set_cursor(cursor)
+
     def set_mode_selector_to_mode(self):
         if editorstate.EDIT_MODE() == editorstate.INSERT_MOVE:
             self.modes_selector.set_pixbuf(0)

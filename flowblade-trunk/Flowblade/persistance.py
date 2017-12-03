@@ -420,9 +420,10 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
 
     # Add MLT objects to sequences.
     global all_clips, sync_clips
+    seq_count = 1
     for seq in project.sequences:
         FIX_N_TO_3_SEQUENCE_COMPATIBILITY(seq)
-        _show_msg(_("Building sequence ") + seq.name)
+        _show_msg(_("Building sequence ") + str(seq_count))
         all_clips = {}
         sync_clips = []
                 
@@ -433,6 +434,8 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
 
         if not hasattr(seq, "seq_len"):
             seq.update_edit_tracks_length()
+
+        seq_count = seq_count + 1
 
     all_clips = {}
     sync_clips = []
@@ -500,7 +503,6 @@ def fill_sequence_mlt(seq, SAVEFILE_VERSION):
             # Keeping backwards compability
             if SAVEFILE_VERSION < 3:
                 FIX_N_TO_3_COMPOSITOR_COMPABILITY(py_compositor, SAVEFILE_VERSION)
-        
             if not hasattr(py_compositor, "obey_autofollow"): # "obey_autofollow" attr was added for 1.16
                 py_compositor.obey_autofollow = True
                 
@@ -516,7 +518,6 @@ def fill_sequence_mlt(seq, SAVEFILE_VERSION):
             compositor.transition.set_tracks(py_compositor.transition.a_track, py_compositor.transition.b_track)
             compositor.set_in_and_out(py_compositor.clip_in, py_compositor.clip_out)
             compositor.origin_clip_id = py_compositor.origin_clip_id
-            print py_compositor.obey_autofollow
             compositor.obey_autofollow = py_compositor.obey_autofollow
            
             mlt_compositors.append(compositor)

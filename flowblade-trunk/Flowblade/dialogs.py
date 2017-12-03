@@ -1173,6 +1173,48 @@ def transition_edit_dialog(callback, transition_data):
     _default_behaviour(dialog)
     dialog.show_all()
 
+def transition_re_render_dialog(callback, transition_data):
+    dialog = Gtk.Dialog(_("Rerender Transition").encode('utf-8'),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT,
+                        _("Rerender").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    alignment, encodings_cb, quality_cb = panels.get_transition_re_render_panel(transition_data)
+    widgets = (encodings_cb, quality_cb)
+    dialog.connect('response', callback, widgets, transition_data)
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.show_all()
+
+def fade_re_render_dialog(callback, fade_data):
+    dialog = Gtk.Dialog(_("Rerender Fade").encode('utf-8'),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT,
+                        _("Rerender").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    alignment, encodings_cb, quality_cb = panels.get_fade_re_render_panel(fade_data)
+    widgets = (encodings_cb, quality_cb)
+    dialog.connect('response', callback, widgets, fade_data)
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.show_all()
+
+def re_render_all_dialog(callback):
+    dialog = Gtk.Dialog(_("Rerender All Transitions and Fades").encode('utf-8'),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT,
+                        _("Rerender All").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    alignment, encodings_cb, quality_cb = panels.get_re_render_all_panel()
+    widgets = (encodings_cb, quality_cb)
+    dialog.connect('response', callback, widgets)
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.show_all()
+
 def fade_edit_dialog(callback, transition_data):
     dialog = Gtk.Dialog(_("Add Fade"),  gui.editor_window.window,
                         Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -1727,5 +1769,35 @@ def tline_audio_sync_dialog(callback, data):
     _default_behaviour(dialog)
     dialog.connect('response', callback, data)
     dialog.show_all()
-        
+
+def autofollow_info_dialog(callback):
+    dialog = Gtk.Dialog("",  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Ok").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    primary_txt = _("Can't move this Compositor!")
+    secondary_txt = _("Compositor Auto Follow is on and this Compositor Obeys it.\nTo free move this Compositor, uncheck 'Obey Auto Follow' from Compositor pop-up menu.")
+    info_panel = dialogutils.get_warning_message_dialog_panel(primary_txt, secondary_txt, True)
+      
+    open_check = Gtk.CheckButton()
+    open_check.set_active(False)
+    open_label = Gtk.Label(label=_("Make Auto Follow Compositors Left Mouse transparent."))
+
+    open_hbox = Gtk.HBox(False, 2)
+    open_hbox.pack_start(open_check, False, False, 0)
+    open_hbox.pack_start(guiutils.pad_label(4, 4), False, False, 0)
+    open_hbox.pack_start(open_label, False, False, 0)
+
+    open_hbox.pack_start(Gtk.Label(), True, True, 0)
+    panel_vbox = Gtk.VBox(False, 2)
+    panel_vbox.pack_start(info_panel, False, False, 0)
+    panel_vbox.pack_start(open_hbox, False, False, 0)
+    
+    alignment = dialogutils.get_alignment2(panel_vbox)
+
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.connect('response', callback, (open_check))
+    dialog.show_all()
 

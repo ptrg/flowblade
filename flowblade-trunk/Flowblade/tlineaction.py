@@ -694,6 +694,16 @@ def _do_rendered_transition(track):
     from_clip = track.clips[movemodes.selected_range_in]
     to_clip = track.clips[movemodes.selected_range_out]
     
+    transition_data = get_transition_data_for_clips(track, from_clip, to_clip)
+    
+    if track.id >= current_sequence().first_video_index:
+        dialogs.transition_edit_dialog(_add_transition_dialog_callback, 
+                                       transition_data)
+    else:
+        _no_audio_tracks_mixing_info()
+
+def get_transition_data_for_clips(track, from_clip, to_clip):
+    
     # Get available clip handles to do transition
     from_handle = from_clip.get_length() - from_clip.clip_out
     from_clip_length = from_clip.clip_out - from_clip.clip_in                                                 
@@ -720,13 +730,8 @@ def _do_rendered_transition(track):
                        "from_handle":from_handle,
                        "to_handle":to_handle,
                        "max_length":max_length}
+    return transition_data
 
-    if track.id >= current_sequence().first_video_index:
-        dialogs.transition_edit_dialog(_add_transition_dialog_callback, 
-                                       transition_data)
-    else:
-        _no_audio_tracks_mixing_info()
-        
 def _add_transition_render_folder_select_callback(dialog, response_id, file_select):
     try:
         folder = file_select.get_filenames()[0]
@@ -817,27 +822,38 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
                                                                         sorted_wipe_luma_index,
                                                                         color_str)
 
+    creation_data = (   from_clip.id,
+                        to_clip.id,
+                        from_out,
+                        from_in,
+                        to_out,
+                        to_in,
+                        transition_type_selection_index,
+                        sorted_wipe_luma_index,
+                        color_str)
+                                                
     # Save transition data into global variable to be available at render complete callback
     global transition_render_data
-    transition_render_data = (trans_index, from_clip, to_clip,  transition_data["track"], from_in, to_out, transition_type_selection_index)
+    transition_render_data = (trans_index, from_clip, to_clip, transition_data["track"], from_in, to_out, transition_type_selection_index, creation_data)
     window_text, type_id = mlttransitions.rendered_transitions[transition_type_selection_index]
     window_text = _("Rendering ") + window_text
 
-    render.render_single_track_transition_clip(producer_tractor,
-                                        encoding_option_index,
-                                        quality_option_index, 
-                                        str(extension_text), 
-                                        _transition_render_complete,
-                                        window_text)
+    render.render_single_track_transition_clip( producer_tractor,
+                                                encoding_option_index,
+                                                quality_option_index, 
+                                                str(extension_text), 
+                                                _transition_render_complete,
+                                                window_text)
 
 def _transition_render_complete(clip_path):
     print "Render complete"
 
     global transition_render_data
-    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type = transition_render_data
+    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data = transition_render_data
 
     transition_clip = current_sequence().create_rendered_transition_clip(clip_path, transition_type)
-    
+    transition_clip.creation_data = creation_data
+
     data = {"transition_clip":transition_clip,
             "transition_index":transition_index,
             "from_clip":from_clip,
@@ -847,6 +863,88 @@ def _transition_render_complete(clip_path):
             "to_out":to_out}
 
     action = edit.add_centered_transition_action(data)
+    action.do_edit()
+
+def re_render_transition(data):
+    clip, track, msg, x = data
+    if not hasattr(clip, "creation_data"):
+        _no_creation_data_dialog()
+        return
+    
+    from_clip_id, to_clip_id, from_out, from_in, to_out, to_in, transition_type_selection_index, \
+    sorted_wipe_luma_index, color_str = clip.creation_data
+    
+    from_clip = editorstate.current_sequence().get_clip_for_id(from_clip_id)
+    to_clip = editorstate.current_sequence().get_clip_for_id(to_clip_id)
+    if from_clip == None or to_clip == None:
+        _source_clips_not_found_dialog()
+        return
+
+    transition_data = {"track":track,
+                        "clip":clip,
+                        "from_clip":from_clip,
+                        "to_clip":to_clip}
+
+    dialogs.transition_re_render_dialog(_transition_RE_render_dialog_callback, transition_data)
+
+def _transition_RE_render_dialog_callback(dialog, response_id, selection_widgets, transition_data):
+    if response_id != Gtk.ResponseType.ACCEPT:
+        dialog.destroy()
+        return
+    
+    dialog.destroy()
+    
+    enc_combo, quality_combo = selection_widgets
+    encoding_option_index = enc_combo.get_active()
+    quality_option_index = quality_combo.get_active()
+    extension_text = "." + renderconsumer.encoding_options[encoding_option_index].extension
+
+    clip = transition_data["clip"]
+    track =  transition_data["track"]
+    from_clip_id, to_clip_id, from_out, from_in, to_out, to_in, transition_type_selection_index, \
+    sorted_wipe_luma_index, color_str = clip.creation_data
+    
+    trans_index = track.clips.index(clip)
+
+    producer_tractor = mlttransitions.get_rendered_transition_tractor(  editorstate.current_sequence(),
+                                                                        transition_data["from_clip"],
+                                                                        transition_data["to_clip"],
+                                                                        from_out,
+                                                                        from_in,
+                                                                        to_out,
+                                                                        to_in,
+                                                                        transition_type_selection_index,
+                                                                        sorted_wipe_luma_index,
+                                                                        color_str)
+    
+
+    # Save transition data into global variable to be available at render complete callback
+    global transition_render_data
+    transition_render_data = (trans_index, track, clip, transition_type_selection_index, clip.creation_data)
+    window_text, type_id = mlttransitions.rendered_transitions[transition_type_selection_index]
+    window_text = _("Rerendering ") + window_text
+
+    render.render_single_track_transition_clip( producer_tractor,
+                                                encoding_option_index,
+                                                quality_option_index, 
+                                                str(extension_text), 
+                                                _transition_RE_render_complete,
+                                                window_text)
+
+def _transition_RE_render_complete(clip_path):
+    global transition_render_data
+    transition_index, track, orig_clip, transition_type, creation_data = transition_render_data
+
+    transition_clip = current_sequence().create_rendered_transition_clip(clip_path, transition_type)
+    transition_clip.creation_data = creation_data
+    transition_clip.clip_in = orig_clip.clip_in
+    transition_clip.clip_out = orig_clip.clip_out
+
+    data = {"track":track,
+            "transition_clip":transition_clip,
+            "transition_index":transition_index}
+
+    action = edit.replace_centered_transition_action(data)
     action.do_edit()
 
 def _check_transition_handles(from_req, from_handle, to_req, to_handle, length):
@@ -971,7 +1069,7 @@ def _add_fade_dialog_callback(dialog, response_id, selection_widgets, transition
                                  gui.editor_window.window)
         return
 
-
+    # Remember fade and transition lengths for next invocation, users prefer this over one default value
     editorstate.fade_length = length
 
     # Edit clears selection, get track index before selection is cleared
@@ -990,9 +1088,21 @@ def _add_fade_dialog_callback(dialog, response_id, selection_widgets, transition
                                                                         color_str)
     print "producer_tractor length:" + str(producer_tractor.get_length())
 
+    # Creation data struct needs to have same members for transitions and fades, hence a lot of None here.
+    # Used for rerender functionality.
+    creation_data = (   clip.id,
+                        None,
+                        length,
+                        None,
+                        None,
+                        None,
+                        transition_type_selection_index,
+                        None,
+                        color_str)
+                        
     # Save transition data into global variable to be available at render complete callback
     global transition_render_data
-    transition_render_data = (clip_index, transition_type_selection_index, clip, transition_data["track"], length)
+    transition_render_data = (clip_index, transition_type_selection_index, clip, transition_data["track"], length, creation_data)
     window_text, type_id = mlttransitions.rendered_transitions[transition_type_selection_index]
     window_text = _("Rendering ") + window_text
     render.render_single_track_transition_clip(producer_tractor,
@@ -1004,10 +1114,11 @@ def _add_fade_dialog_callback(dialog, response_id, selection_widgets, transition
 
 def _fade_render_complete(clip_path):
     global transition_render_data
-    clip_index, fade_type, clip, track, length = transition_render_data
+    clip_index, fade_type, clip, track, length, creation_data = transition_render_data
 
     fade_clip = current_sequence().create_rendered_transition_clip(clip_path, fade_type)
-    
+    fade_clip.creation_data = creation_data
+
     data = {"fade_clip":fade_clip,
             "index":clip_index,
             "track":track,
@@ -1019,7 +1130,122 @@ def _fade_render_complete(clip_path):
     else: # mlttransitions.RENDERED_FADE_OUT
         action = edit.add_rendered_fade_out_action(data)
         action.do_edit()
+
+def re_render_fade(data):
+    clip, track, msg, x = data
+    if not hasattr(clip, "creation_data"):
+        _no_creation_data_dialog()
+        return
+    
+    from_clip_id, to_clip_id, from_out, from_in, to_out, to_in, transition_type_selection_index, \
+    sorted_wipe_luma_index, color_str = clip.creation_data
+    
+    from_clip = editorstate.current_sequence().get_clip_for_id(from_clip_id)
+    if from_clip == None:
+        _source_clips_not_found_dialog()
+        return
+
+    fade_data = {   "track":track,
+                    "clip":clip,
+                    "from_clip":from_clip}
+
+    dialogs.fade_re_render_dialog(_fade_RE_render_dialog_callback, fade_data)
+
+def _fade_RE_render_dialog_callback(dialog, response_id, selection_widgets, fade_data):
+    if response_id != Gtk.ResponseType.ACCEPT:
+        dialog.destroy()
+        return
+    
+    # Get input data
+    enc_combo, quality_combo = selection_widgets
+    encoding_option_index = enc_combo.get_active()
+    quality_option_index = quality_combo.get_active()
+    extension_text = "." + renderconsumer.encoding_options[encoding_option_index].extension
+
+    dialog.destroy()
         
+    track = fade_data["track"]
+    orig_fade_clip = fade_data["clip"]
+    from_clip = fade_data["from_clip"]
+    length = orig_fade_clip.clip_out - orig_fade_clip.clip_in + 1
+    
+    from_clip_id, to_clip_id, from_out, from_in, to_out, to_in, transition_type_index, \
+    sorted_wipe_luma_index, color_str = orig_fade_clip.creation_data
+
+    # We need to change fade source clip in or out point and source clip is in timeline currently
+    from_clone = editorstate.current_sequence().create_clone_clip(from_clip)
+    if transition_type_index == appconsts.RENDERED_FADE_IN:
+        from_clone.clip_in = from_clone.clip_in - length
+    else:
+        from_clone.clip_out = from_clone.clip_out + length
+    
+    # Save encoding
+    PROJECT().set_project_property(appconsts.P_PROP_TRANSITION_ENCODING,(encoding_option_index, quality_option_index))
+    
+    editorstate.fade_length = length #?????
+
+    producer_tractor = mlttransitions.get_rendered_transition_tractor(  editorstate.current_sequence(),
+                                                                        from_clone,
+                                                                        None,
+                                                                        length,
+                                                                        None,
+                                                                        None,
+                                                                        None,
+                                                                        transition_type_index,
+                                                                        None,
+                                                                        color_str)
+    print "producer_tractor length:" + str(producer_tractor.get_length())
+
+    fade_clip_index = track.clips.index(orig_fade_clip)
+    
+    # Save transition data into global variable to be available at render complete callback
+    global transition_render_data
+    transition_render_data = (fade_clip_index, transition_type_index, from_clone, track, length, orig_fade_clip.creation_data)
+    window_text, type_id = mlttransitions.rendered_transitions[transition_type_index]
+    window_text = _("Rendering ") + window_text
+    render.render_single_track_transition_clip( producer_tractor,
+                                                encoding_option_index,
+                                                quality_option_index, 
+                                                str(extension_text), 
+                                                _fade_RE_render_complete,
+                                                window_text)
+
+def _fade_RE_render_complete(clip_path):    
+    global transition_render_data
+    clip_index, fade_type, from_clone, track, length, creation_data = transition_render_data
+
+    new_fade_clip = current_sequence().create_rendered_transition_clip(clip_path, fade_type)
+    new_fade_clip.creation_data = creation_data
+
+    data = {"fade_clip":new_fade_clip,
+            "index":clip_index,
+            "track":track,
+            "length":length}
+
+    action = edit.replace_rendered_fade_action(data)
+    action.do_edit()
+
+def rerender_all_rendered_transitions_and_fades():
+    dialogs.re_render_all_dialog(_RE_render_all_dialog_callback)
+
+def _RE_render_all_dialog_callback(dialog, response_id, selection_widgets):
+    if response_id != Gtk.ResponseType.ACCEPT:
+        dialog.destroy()
+        return
+    
+    encodings_cb, quality_cb = selection_widgets
+    dialog.destroy()
+
+def _no_creation_data_dialog():
+    primary_txt = _("Can't rerender this fade / transition.")
+    secondary_txt = _("This fade / transition was created with Flowblade <= 1.14 and does not have the necessary data embedded.\nRerendering works with fades/transitions created with Flowblade >= 1.16.")
+    dialogutils.info_message(primary_txt, secondary_txt, gui.editor_window.window)
+
+def _source_clips_not_found_dialog():
+    primary_txt = _("Can't rerender this fade / transition.")
+    secondary_txt = _("The clip/s used to create this fade / transition are no longer available on the timeline.")
+    dialogutils.info_message(primary_txt, secondary_txt, gui.editor_window.window)
+    
 # --------------------------------------------------------- view move setting
 def view_mode_menu_lauched(launcher, event):
     guicomponents.get_monitor_view_popupmenu(launcher, event, _view_mode_menu_item_item_activated)

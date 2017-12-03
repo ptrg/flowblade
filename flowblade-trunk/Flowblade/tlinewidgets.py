@@ -33,8 +33,10 @@ from gi.repository import PangoCairo
 
 import appconsts
 import audiowaveformrenderer
+import boxmove
 import cairoarea
 import clipeffectseditor
+import compositormodes
 import editorpersistance
 from editorstate import current_sequence
 from editorstate import timeline_visible
@@ -269,6 +271,11 @@ draw_blank_borders = True
 # Draw state
 pix_per_frame = 5.0 # Current draw scale. This set set elsewhere on init so default value irrelevant.
 pos = 0 # Current left most frame in timeline display
+
+# A context defining action taken when mouse press happens based on edit mode and mouse position.
+# Cursor communicates current pointer contest to user.
+pointer_context = appconsts.POINTER_CONTEXT_NONE
+DRAG_SENSITIVITY_AREA_WIDTH_PIX = 10
 
 # ref to singleton TimeLineCanvas instance for mode setting and some position
 # calculations.
@@ -1308,6 +1315,8 @@ class TimeLineCanvas:
         self.widget = cairoarea.CairoDrawableArea2( WIDTH, 
                                                     HEIGHT, 
                                                     self._draw)
+        self.widget.add_pointer_motion_mask()
+        
         self.widget.press_func = self._press_event
         self.widget.motion_notify_func = self._motion_notify_event
         self.widget.release_func = self._release_event
@@ -1349,7 +1358,7 @@ class TimeLineCanvas:
         """
         Mouse move callback
         """
-        if not self.drag_on:
+        if (not self.drag_on) and editorstate.cursor_is_tline_sensitive == True:
             self.set_pointer_context(x, y)
             return
 
@@ -1378,27 +1387,65 @@ class TimeLineCanvas:
                               event.button, event.get_state())
 
     def set_pointer_context(self, x, y):
+        current_pointer_context = self.get_pointer_context(x, y)
+
+        # If pointer_context changed then save it and change cursor.
+        global pointer_context
+        if pointer_context != current_pointer_context:
+            pointer_context = current_pointer_context
+            if pointer_context == appconsts.POINTER_CONTEXT_NONE:
+                gui.editor_window.set_tline_cursor(EDIT_MODE())
+            else:
+                gui.editor_window.set_tline_cursor_to_context(pointer_context)
+        
+    def get_pointer_context(self, x, y):
         frame = get_frame(x)
         hit_compositor = compositor_hit(frame, y, current_sequence().compositors)
         if hit_compositor != None:
-            return
+            if (editorstate.auto_follow_compositors_mouse_transparent == True and (editorstate.auto_follow == True and hit_compositor.obey_autofollow == True)):
+                # We get here if auto follow but compositors mouse transparent
+                # and move down the method to see if clip behind gets pointer context
+                pass
+            else:
+                if editorstate.auto_follow == False or (editorstate.auto_follow == True and hit_compositor.obey_autofollow == False):
+                    return compositormodes.get_pointer_context(hit_compositor, x)
+                else:
+                    return appconsts.POINTER_CONTEXT_NONE
 
-        track = get_track(y)  
+        track = get_track(y)
         if track == None:
-            return    
+            return appconsts.POINTER_CONTEXT_NONE
 
         clip_index = current_sequence().get_clip_index(track, frame)
         if clip_index == -1:
-            return
+            # This gets none always afetr rack, which may not be what we want
+            return appconsts.POINTER_CONTEXT_NONE
 
         clip_start_frame = track.clip_start(clip_index) - pos
-        if abs(x - _get_frame_x(clip_start_frame)) < 5:
-            return
-
         clip_end_frame = track.clip_start(clip_index + 1) - pos
-        if abs(x - _get_frame_x(clip_end_frame)) < 5:
-            return
-
+        
+        # INSERT, OVEWRITE
+        if (EDIT_MODE() == editorstate.INSERT_MOVE or EDIT_MODE() == editorstate.OVERWRITE_MOVE) and editorstate.overwrite_mode_box == False:
+            if abs(x - _get_frame_x(clip_start_frame)) < DRAG_SENSITIVITY_AREA_WIDTH_PIX:
+                return appconsts.POINTER_CONTEXT_END_DRAG_LEFT
+            if abs(x - _get_frame_x(clip_end_frame)) < DRAG_SENSITIVITY_AREA_WIDTH_PIX:
+                return appconsts.POINTER_CONTEXT_END_DRAG_RIGHT
+            
+            return appconsts.POINTER_CONTEXT_NONE
+        # TRIM
+        elif EDIT_MODE() == editorstate.ONE_ROLL_TRIM or EDIT_MODE() == editorstate.ONE_ROLL_TRIM_NO_EDIT:
+            if abs(frame - clip_start_frame) < abs(frame - clip_end_frame):
+                return appconsts.POINTER_CONTEXT_TRIM_LEFT
+            else:
+                return appconsts.POINTER_CONTEXT_TRIM_RIGHT
+        # BOX
+        elif (EDIT_MODE() == editorstate.OVERWRITE_MOVE and editorstate.overwrite_mode_box == True and 
+            boxmove.box_selection_data != None):
+            if boxmove.box_selection_data.is_hit(x, y):
+                return appconsts.POINTER_CONTEXT_BOX_SIDEWAYS
+                
+        return appconsts.POINTER_CONTEXT_NONE
+            
     #----------------------------------------- DRAW
     def _draw(self, event, cr, allocation):
         x, y, w, h = allocation
@@ -2355,6 +2402,13 @@ class TimeLineFrameScale:
             small_tick_step = int(view_length / NUMBER_OF_LINES)
             tc_draw_step = int(view_length / NUMBER_OF_LINES)
 
+        # Draw tc
+        cr.select_font_face ("sans-serif",
+                              cairo.FONT_SLANT_NORMAL,
+                              cairo.FONT_WEIGHT_NORMAL)
+
+        cr.set_font_size(11)
+        
         # Draw small tick lines
         # Get draw range in steps from 0
         start = int(view_start_frame / small_tick_step)
@@ -2366,37 +2420,42 @@ class TimeLineFrameScale:
             x = math.floor(i * small_tick_step * pix_per_frame - pos * pix_per_frame) + 0.5 
             cr.move_to(x, SCALE_HEIGHT)
             cr.line_to(x, SMALL_TICK_Y)
+            if tc_draw_step == small_tick_step:
+                cr.move_to(x, TC_Y)
+                text = utils.get_tc_string(int(round(float(i) * float(tc_draw_step))))
+                cr.show_text(text);
         cr.stroke()
+        
+        # 23.98 and 29.97 need this to get drawn on even seconds with big ticks and tcs
+        if round(fps) != fps:
+            to_seconds_fix_add = 1.0
+        else:
+            to_seconds_fix_add = 0.0
         
         # Draw big tick lines, if required
         if big_tick_step != -1:
             count = int(seq.get_length() / big_tick_step)
             for i in range(1, count):
-                x = math.floor(math.floor(i * big_tick_step) * pix_per_frame \
+                x = math.floor((math.floor(i * big_tick_step) + to_seconds_fix_add) * pix_per_frame \
                     - pos * pix_per_frame) + 0.5 
                 cr.move_to(x, SCALE_HEIGHT)
                 cr.line_to(x, BIG_TICK_Y)
                 cr.stroke()
 
-        # Draw tc
-        cr.select_font_face ("sans-serif",
-                              cairo.FONT_SLANT_NORMAL,
-                              cairo.FONT_WEIGHT_NORMAL)
-
-        cr.set_font_size(11)
-        start = int(view_start_frame / tc_draw_step)
-        # Get draw range in steps from 0
-        if start == pos:
-            start += 1 # don't draw line on first pixel of scale display
-        # +1 to ensure coverage
-        end = int(view_end_frame / tc_draw_step) + 1 
-        for i in range(start, end):
-            x = math.floor(i * tc_draw_step * pix_per_frame \
-                - pos * pix_per_frame) + 0.5
-            cr.move_to(x, TC_Y)
-            text = utils.get_tc_string(i * tc_draw_step)
-            cr.show_text(text);
-
+        if tc_draw_step != small_tick_step:
+            start = int(view_start_frame / tc_draw_step)
+            # Get draw range in steps from 0
+            if start == pos:
+                start += 1 # don't draw line on first pixel of scale display
+            # +1 to ensure coverage
+            end = int(view_end_frame / tc_draw_step) + 1 
+            for i in range(start, end):
+                x = math.floor((math.floor(i * tc_draw_step) + to_seconds_fix_add) * pix_per_frame \
+                    - pos * pix_per_frame) + 0.5
+                cr.move_to(x, TC_Y)
+                text = utils.get_tc_string(int(math.floor((float(i) * tc_draw_step) + to_seconds_fix_add)))
+                cr.show_text(text)
+        
         # Draw marks
         self.draw_mark_in(cr, h)
         self.draw_mark_out(cr, h)
