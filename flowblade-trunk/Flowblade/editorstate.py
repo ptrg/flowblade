@@ -59,8 +59,7 @@ player = None
 edit_mode = INSERT_MOVE
 
 # Compositor autofollow state. If true when edit is performed, all compositors are auto resynced on first do, redo and undo actions.
-auto_follow = True
-auto_follow_compositors_mouse_transparent = False
+auto_follow = False
 
 # Trim tool ripple mode is expressed as a flag
 trim_mode_ripple = False
@@ -235,6 +234,12 @@ def screen_size_small():
         return True
     
     return False
+
+def screen_size_small_height():
+    if SCREEN_HEIGHT < 898:
+        return True
+    else:
+        return False
 
 def get_cached_trim_clip(path):
     try:

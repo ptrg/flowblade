@@ -124,6 +124,7 @@ AUDIO_MUTE_ICON = None
 VIDEO_MUTE_ICON = None
 ALL_MUTE_ICON = None
 MARKER_ICON = None
+CLIP_MARKER_ICON = None
 LEVELS_RENDER_ICON = None
 SNAP_ICON = None
 KEYBOARD_ICON = None
@@ -182,6 +183,7 @@ CLIP_COLOR_L = get_multiplied_color(CLIP_COLOR, GRAD_MULTIPLIER)
 CLIP_COLOR_GRAD = (1, 0.62, 0.38, 0.7, 1)
 CLIP_COLOR_GRAD_L = get_multiplied_grad(0, 1, CLIP_COLOR_GRAD, GRAD_MULTIPLIER) 
 CLIP_SELECTED_COLOR = get_multiplied_color_from_grad(CLIP_COLOR_GRAD, SELECTED_MULTIPLIER)
+CLIP_END_DRAG_OVERLAY_COLOR = (1,1,1,0.3)
 
 AUDIO_CLIP_COLOR_GRAD = (1, 0.23, 0.52, 0.23, 1)#(1, 0.79, 0.80, 0.18, 1)
 AUDIO_CLIP_COLOR_GRAD_L = get_multiplied_grad(0, 1, AUDIO_CLIP_COLOR_GRAD, GRAD_MULTIPLIER + 0.5)
@@ -310,7 +312,7 @@ def load_icons():
     COMPOSITOR_CLIP_ICON, INSERT_ARROW_ICON, AUDIO_MUTE_ICON, MARKER_ICON, \
     VIDEO_MUTE_ICON, ALL_MUTE_ICON, TRACK_BG_ICON, MUTE_AUDIO_ICON, MUTE_VIDEO_ICON, MUTE_ALL_ICON, \
     TRACK_ALL_ON_V_ICON, TRACK_ALL_ON_A_ICON, MUTE_AUDIO_A_ICON, TC_POINTER_HEAD, EDIT_INDICATOR, \
-    LEVELS_RENDER_ICON, SNAP_ICON, KEYBOARD_ICON, CLOSE_MATCH_ICON
+    LEVELS_RENDER_ICON, SNAP_ICON, KEYBOARD_ICON, CLOSE_MATCH_ICON, CLIP_MARKER_ICON
 
     FULL_LOCK_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "full_lock.png")
     FILTER_CLIP_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "filter_clip_icon_sharp.png")
@@ -328,6 +330,7 @@ def load_icons():
     SNAP_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "snap_magnet.png")
     KEYBOARD_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "keyb_trim.png")
     CLOSE_MATCH_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "close_match.png")
+    CLIP_MARKER_ICON = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "clip_marker.png")
 
     MARKER_ICON = _load_pixbuf("marker.png")
     TRACK_ALL_ON_V_ICON = _load_pixbuf("track_all_on_V.png")
@@ -1072,7 +1075,7 @@ def draw_clip_end_drag_overlay(cr, data):
     
     # Draw clips in draw range
     cr.set_line_width(MOVE_CLIPS_LINE_WIDTH)
-    cr.set_source_rgb(*OVERLAY_TRIM_COLOR)
+
 
     clip_length = end - start
     scale_length = clip_length * pix_per_frame
@@ -1080,6 +1083,9 @@ def draw_clip_end_drag_overlay(cr, data):
     track_height = data["track_height"]
 
     cr.rectangle(scale_in, int(y) + 1.5, int(scale_length), track_height - 2.0)
+    cr.set_source_rgba(*CLIP_END_DRAG_OVERLAY_COLOR)
+    cr.fill_preserve()
+    cr.set_source_rgb(*OVERLAY_TRIM_COLOR)
     cr.stroke()
 
     if editorpersistance.prefs.delta_overlay == True:
@@ -1402,15 +1408,10 @@ class TimeLineCanvas:
         frame = get_frame(x)
         hit_compositor = compositor_hit(frame, y, current_sequence().compositors)
         if hit_compositor != None:
-            if (editorstate.auto_follow_compositors_mouse_transparent == True and (editorstate.auto_follow == True and hit_compositor.obey_autofollow == True)):
-                # We get here if auto follow but compositors mouse transparent
-                # and move down the method to see if clip behind gets pointer context
-                pass
+            if editorstate.auto_follow == False or (editorstate.auto_follow == True and hit_compositor.obey_autofollow == False):
+                return compositormodes.get_pointer_context(hit_compositor, x)
             else:
-                if editorstate.auto_follow == False or (editorstate.auto_follow == True and hit_compositor.obey_autofollow == False):
-                    return compositormodes.get_pointer_context(hit_compositor, x)
-                else:
-                    return appconsts.POINTER_CONTEXT_NONE
+                return appconsts.POINTER_CONTEXT_NONE
 
         track = get_track(y)
         if track == None:
@@ -1421,8 +1422,8 @@ class TimeLineCanvas:
             # This gets none always afetr rack, which may not be what we want
             return appconsts.POINTER_CONTEXT_NONE
 
-        clip_start_frame = track.clip_start(clip_index) - pos
-        clip_end_frame = track.clip_start(clip_index + 1) - pos
+        clip_start_frame = track.clip_start(clip_index)
+        clip_end_frame = track.clip_start(clip_index + 1)
         
         # INSERT, OVEWRITE
         if (EDIT_MODE() == editorstate.INSERT_MOVE or EDIT_MODE() == editorstate.OVERWRITE_MOVE) and editorstate.overwrite_mode_box == False:
@@ -1933,6 +1934,15 @@ class TimeLineCanvas:
                     cr.set_source_surface(LEVELS_RENDER_ICON, int(scale_in) + 4, y + 8)
                     cr.paint()
 
+            # Clip markers
+            if len(clip.markers) > 0 and scale_length > TEXT_MIN:
+                for marker in clip.markers:
+                    name, clip_marker_frame = marker
+                    marker_x = (clip_start_frame + clip_marker_frame - clip.clip_in) * pix_per_frame
+                    cr.set_source_surface(CLIP_MARKER_ICON, int(marker_x) - 4, y)
+                    cr.paint()
+                    
+                    
             # Get next draw position
             clip_start_frame += clip_length
 
@@ -2099,7 +2109,9 @@ class TimeLineCanvas:
         
         global match_frame_image
         match_frame_image = scaled_icon
-        
+
+
+
 class TimeLineColumn:
     """
     GUI component for displaying and editing track parameters.

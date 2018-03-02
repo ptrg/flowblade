@@ -294,6 +294,51 @@ def save_project_as_dialog(callback, current_name, open_dir, parent=None):
     dialog.connect('response', callback)
     dialog.show()
 
+def save_effects_compositors_values(callback, default_name, saving_effect=True):
+    parent = gui.editor_window.window
+
+    if saving_effect == True:
+        title = _("Save Effect Values Data")
+    else:
+        title = _("Save Compositor Values Data")
+        
+    dialog = Gtk.FileChooserDialog(title, parent,
+                                   Gtk.FileChooserAction.SAVE,
+                                   (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
+                                    _("Save").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.SAVE)
+    dialog.set_current_name(default_name)
+    dialog.set_do_overwrite_confirmation(True)
+
+    dialog.set_select_multiple(False)
+    file_filter = Gtk.FileFilter()
+    file_filter.set_name(_("Effect/Compositor Values Data"))
+    file_filter.add_pattern("*" + "data")
+    dialog.add_filter(file_filter)
+    dialog.connect('response', callback)
+    dialog.show()
+
+def load_effects_compositors_values_dialog(callback, loading_effect=True):
+    parent = gui.editor_window.window
+
+    if loading_effect == True:
+        title_text = _("Load Effect Values Data")
+    else:
+        title_text = _("Load Compositor Values Data") 
+
+    dialog = Gtk.FileChooserDialog(title_text, parent,
+                                   Gtk.FileChooserAction.OPEN,
+                                   (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
+                                    _("OK").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.OPEN)
+    dialog.set_select_multiple(False)
+    file_filter = Gtk.FileFilter()
+    file_filter.set_name(_("Effect/Compositor Values Data"))
+    file_filter.add_pattern("*" + "data")
+    dialog.add_filter(file_filter)
+    dialog.connect('response', callback)
+    dialog.show()
+    
 def export_xml_dialog(callback, project_name):
     _export_file_name_dialog(callback, project_name, _("Export Project as XML to"))
 
@@ -847,9 +892,9 @@ def autosaves_many_recovery_dialog(response_callback, autosaves, parent_window):
     autosaves_view.set_size_request(300, 300)
     autosaves_view.fill_data_model(autosaves)
 
-    delete_all = Gtk.Button("Delete all autosaves")
+    delete_all = Gtk.Button(_("Delete all autosaves"))
     delete_all.connect("clicked", lambda w : _autosaves_delete_all_clicked(autosaves, autosaves_view, dialog))
-    delete_all_but_selected = Gtk.Button("Delete all but selected autosave")
+    delete_all_but_selected = Gtk.Button(_("Delete all but selected autosave"))
     delete_all_but_selected.connect("clicked", lambda w : _autosaves_delete_unselected(autosaves, autosaves_view))
 
     delete_buttons_vbox = Gtk.HBox()
@@ -1106,6 +1151,71 @@ def marker_name_dialog(frame_str, callback):
     dialog.set_default_response(Gtk.ResponseType.ACCEPT)
     _default_behaviour(dialog)
     dialog.connect('response', callback, name_entry)
+    dialog.show_all()
+
+def clip_marker_name_dialog(clip_frame_str, tline_frame_str, callback, data):
+    dialog = Gtk.Dialog(_("New Marker"),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Add Marker").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    tline_frame_info = guiutils.get_left_justified_box([Gtk.Label(_("Timeline position: ") + tline_frame_str),Gtk.Label()])
+
+    name_entry = Gtk.Entry()
+    name_entry.set_width_chars(30)
+    name_entry.set_text("")
+    name_entry.set_activates_default(True)
+
+    name_select = panels.get_two_column_box(Gtk.Label(label=_("Name for clip marker at ") + clip_frame_str),
+                                               name_entry,
+                                               250)
+
+    rows_vbox = Gtk.VBox(False, 2)
+    rows_vbox.pack_start(tline_frame_info, False, False, 0)
+    rows_vbox.pack_start(name_select, False, False, 0)
+    #rows_vbox.pack_start(guiutils.get_pad_label(12, 2), False, False, 0)
+    
+    alignment = dialogutils.get_default_alignment(rows_vbox)
+        
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    dialog.set_default_response(Gtk.ResponseType.ACCEPT)
+    _default_behaviour(dialog)
+    dialog.connect('response', callback, name_entry, data)
+    dialog.show_all()
+
+def alpha_info_msg(callback, filter_name):
+    dialog = Gtk.Dialog(_("Alpha Filters Info"),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Ok").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+
+    line_label = Gtk.Label(_("You are adding <b>Alpha Filter '") + filter_name + _("'</b> into a clip. Here is some info on how <b>Alpha Filters</b> work on Flowblade:"))
+    line_label.set_use_markup(True)
+    row1 = guiutils.get_left_justified_box([line_label])
+    
+    info_text = u"\u2022" + _(" <b>Alpha Filters</b> work by modifying image's alpha channel.\n") + \
+                u"\u2022" + _(" To see the effect of <b>Alpha Filter</b> you need composite this clip on track below by adding a <b>Compositor like 'Dissolve'</b> into this clip.\n") + \
+                u"\u2022" + _(" <b>Alpha Filters</b> on clips on <b>Track V1</b> have no effect.")
+    info_label = Gtk.Label(label=info_text)
+    info_label.set_use_markup(True)
+    info_box = guiutils.get_left_justified_box([info_label])
+
+    dont_show_check = Gtk.CheckButton.new_with_label (_("Don't show this message again."))
+    row2 = guiutils.get_left_justified_box([dont_show_check])
+
+    vbox = Gtk.VBox(False, 2)
+    vbox.pack_start(row1, False, False, 0)
+    vbox.pack_start(guiutils.pad_label(24, 12), False, False, 0)
+    vbox.pack_start(info_box, False, False, 0)
+    vbox.pack_start(guiutils.pad_label(24, 24), False, False, 0)
+    vbox.pack_start(row2, False, False, 0)
+    
+    alignment = dialogutils.get_default_alignment(vbox)
+
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    dialog.set_default_response(Gtk.ResponseType.ACCEPT)
+    _default_behaviour(dialog)
+    dialog.connect('response', callback, dont_show_check)
     dialog.show_all()
 
 def open_image_sequence_dialog(callback, parent_window):
@@ -1427,7 +1537,7 @@ def watermark_dialog(add_callback, remove_callback):
     add_button = Gtk.Button(_("Set Watermark File"))
     remove_button = Gtk.Button(_("Remove Watermark"))
     if editorstate.current_sequence().watermark_file_path == None:
-        file_path_value_label = Gtk.Label(label="Not Set")
+        file_path_value_label = Gtk.Label(label=_("Not Set"))
         add_button.set_sensitive(True)
         remove_button.set_sensitive(False)
     else:
@@ -1770,34 +1880,4 @@ def tline_audio_sync_dialog(callback, data):
     dialog.connect('response', callback, data)
     dialog.show_all()
 
-def autofollow_info_dialog(callback):
-    dialog = Gtk.Dialog("",  gui.editor_window.window,
-                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                        (_("Ok").encode('utf-8'), Gtk.ResponseType.ACCEPT))
-
-    primary_txt = _("Can't move this Compositor!")
-    secondary_txt = _("Compositor Auto Follow is on and this Compositor Obeys it.\nTo free move this Compositor, uncheck 'Obey Auto Follow' from Compositor pop-up menu.")
-    info_panel = dialogutils.get_warning_message_dialog_panel(primary_txt, secondary_txt, True)
-      
-    open_check = Gtk.CheckButton()
-    open_check.set_active(False)
-    open_label = Gtk.Label(label=_("Make Auto Follow Compositors Left Mouse transparent."))
-
-    open_hbox = Gtk.HBox(False, 2)
-    open_hbox.pack_start(open_check, False, False, 0)
-    open_hbox.pack_start(guiutils.pad_label(4, 4), False, False, 0)
-    open_hbox.pack_start(open_label, False, False, 0)
-
-    open_hbox.pack_start(Gtk.Label(), True, True, 0)
-    panel_vbox = Gtk.VBox(False, 2)
-    panel_vbox.pack_start(info_panel, False, False, 0)
-    panel_vbox.pack_start(open_hbox, False, False, 0)
-    
-    alignment = dialogutils.get_alignment2(panel_vbox)
-
-    dialog.vbox.pack_start(alignment, True, True, 0)
-    dialogutils.set_outer_margins(dialog.vbox)
-    _default_behaviour(dialog)
-    dialog.connect('response', callback, (open_check))
-    dialog.show_all()
 

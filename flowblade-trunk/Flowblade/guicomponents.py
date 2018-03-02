@@ -109,6 +109,7 @@ filter_stack_menu_popup_menu = Gtk.Menu()
 media_linker_popup_menu = Gtk.Menu()
 log_event_popup_menu = Gtk.Menu()
 levels_menu = Gtk.Menu()
+clip_effects_hamburger_menu = Gtk.Menu()
 
 # ------------------------------------------------- item lists
 class ImageTextTextListView(Gtk.VBox):
@@ -574,7 +575,7 @@ class AutoSavesListView(TextListView):
         self.storemodel.clear()
         for autosave_object in autosaves:
             since_time_str = utils.get_time_str_for_sec_float(autosave_object.age)
-            row_data = ["Autosave created " + since_time_str + " ago."]
+            row_data = [_("Autosave created ") + since_time_str + _(" ago.")]
             self.storemodel.append(row_data)
 
         self.treeview.set_cursor("0")
@@ -1210,10 +1211,8 @@ def display_clip_popup_menu(event, clip, track, callback):
     clip_menu.add(_get_menu_item(_("Clear Filters"), callback, (clip, track, "clear_filters", event.x)))
 
     _add_separetor(clip_menu)
-
-    clip_menu.add(_get_menu_item(_("Rename Clip"), callback,\
-                      (clip, track, "rename_clip", event.x)))
-    clip_menu.add(_get_color_menu_item(clip, track, callback))
+    clip_menu.add(_get_clip_properties_menu_item(event, clip, track, callback))
+    clip_menu.add(_get_clip_markers_menu_item(event, clip, track, callback))
     clip_menu.add(_get_menu_item(_("Clip Info"), callback,\
                   (clip, track, "clip_info", event.x)))
 
@@ -1229,7 +1228,6 @@ def display_clip_popup_menu(event, clip, track, callback):
     clip_menu.add(_get_edit_menu_item(event, clip, track, callback))
 
     clip_menu.popup(None, None, None, None, event.button, event.time)
-
 
 def display_transition_clip_popup_menu(event, clip, track, callback):
     clip_menu = transition_clip_menu
@@ -1627,6 +1625,16 @@ def _get_track_mute_menu_item(event, track, callback):
     menu_item.show()
     return menu_item
 
+def _get_clip_properties_menu_item(event, clip, track, callback):
+    properties_menu_item = Gtk.MenuItem(_("Properties"))
+    properties_menu =  Gtk.Menu()
+    properties_menu.add(_get_menu_item(_("Rename Clip"), callback,\
+                      (clip, track, "rename_clip", event.x)))
+    properties_menu.add(_get_color_menu_item(clip, track, callback))
+    properties_menu_item.set_submenu(properties_menu)
+    properties_menu_item.show_all()
+    return properties_menu_item
+
 def _get_color_menu_item(clip, track, callback):
     color_menu_item = Gtk.MenuItem(_("Clip Color"))
     color_menu =  Gtk.Menu()
@@ -1640,6 +1648,33 @@ def _get_color_menu_item(clip, track, callback):
     color_menu_item.set_submenu(color_menu)
     color_menu_item.show_all()
     return color_menu_item
+
+def _get_clip_markers_menu_item(event, clip, track, callback):
+    markers_menu_item = Gtk.MenuItem(_("Markers"))
+    markers_menu =  Gtk.Menu()
+    markers_exist = len(clip.markers) != 0
+    #menu = markers_menu
+    #guiutils.remove_children(menu)
+    if markers_exist:
+        for i in range(0, len(clip.markers)):
+            marker = clip.markers[i]
+            name, frame = marker
+            item_str = utils.get_tc_string(frame) + " " + name
+            markers_menu.add(_get_menu_item(item_str, callback, (clip, track, "go_to_clip_marker", str(i))))
+        _add_separetor(markers_menu)
+    else:
+        no_markers_item = _get_menu_item(_("No Clip Markers"), callback, "dummy", False)
+        markers_menu.add(no_markers_item)
+        _add_separetor(markers_menu)
+        
+    markers_menu.add(_get_menu_item(_("Add Clip Marker At Playhead Position"), callback, (clip, track, "add_clip_marker", None)))
+    del_item = _get_menu_item(_("Delete Clip Marker At Playhead Position"), callback, (clip, track, "delete_clip_marker", None), markers_exist==True)
+    markers_menu.add(del_item)
+    del_all_item = _get_menu_item(_("Delete All Clip Markers"), callback, (clip, track, "deleteall_clip_markers", None), markers_exist==True)
+    markers_menu.add(del_all_item)
+    markers_menu_item.set_submenu(markers_menu)
+    markers_menu_item.show_all()
+    return markers_menu_item
 
 def _set_non_sensitive_if_state_matches(mutable, item, state):
     if mutable.mute_state == state:
@@ -2282,6 +2317,15 @@ def get_audio_levels_popup_menu(event, callback):
     autofollow_item.connect("activate", callback, "autofollow")
 
     menu.append(autofollow_item)
+
+    _add_separetor(menu)
+
+    ponter_sensitive_item = Gtk.CheckMenuItem()
+    ponter_sensitive_item.set_label(_("Tool Cursor Context Sensitive"))
+    ponter_sensitive_item.set_active(editorstate.cursor_is_tline_sensitive)
+    ponter_sensitive_item.connect("activate", callback, "pointer_sensitive_item")
+
+    menu.append(ponter_sensitive_item) 
     
     _add_separetor(menu)
     
@@ -2337,6 +2381,38 @@ def get_audio_levels_popup_menu(event, callback):
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
 
+def get_clip_effects_editor_hamburger_menu(event, callback):
+    # needs renaming
+    menu = clip_effects_hamburger_menu
+    guiutils.remove_children(menu)
+
+    menu.add(_get_menu_item(_("Save Effect Values"), callback, "save"))
+    menu.add(_get_menu_item(_("Load Effect Values"), callback, "load"))
+    menu.add(_get_menu_item(_("Reset Effect Values"), callback, "reset"))
+    
+    _add_separetor(menu)
+    
+    menu.add(_get_menu_item(_("Delete Effect"), callback, "delete"))
+
+    menu.show_all()
+    menu.popup(None, None, None, None, event.button, event.time)
+
+def get_compositor_editor_hamburger_menu(event, callback):
+    # needs renaming
+    menu = clip_effects_hamburger_menu
+    guiutils.remove_children(menu)
+
+    menu.add(_get_menu_item(_("Save Compositor Values"), callback, "save"))
+    menu.add(_get_menu_item(_("Load Compositor Values"), callback, "load"))
+    menu.add(_get_menu_item(_("Reset Compositor Values"), callback, "reset"))
+    
+    _add_separetor(menu)
+    
+    menu.add(_get_menu_item(_("Delete Compositor"), callback, "delete"))
+
+    menu.show_all()
+    menu.popup(None, None, None, None, event.button, event.time)
+    
 def get_monitor_view_popupmenu(launcher, event, callback):
     menu = monitor_menu
     guiutils.remove_children(menu)
