@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2018-01-12 13:04+0100\n"
-"PO-Revision-Date: 2018-01-03 13:22+0100\n"
+"PO-Revision-Date: 2018-01-12 13:37+0100\n"
 "Last-Translator: Péter Gábor <ptrg@freemail.hu>\n"
 "Language-Team: \n"
 "Language: hu_HU\n"
@@ -4086,10 +4086,8 @@ msgid "Fade In Length"
 msgstr "Előtűnés hossza"
 
 #: translations.py:539
-#, fuzzy
-#| msgid "Lens Correction"
 msgid "Wipe Direction"
-msgstr "Lencse korrekció"
+msgstr "Áttolás iránya"
 
 #: translations.py:543 translations.py:549
 msgid "Shave"
