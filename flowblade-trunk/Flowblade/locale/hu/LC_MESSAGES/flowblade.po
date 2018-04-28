@@ -4396,8 +4396,6 @@ msgstr "Eltűnés hossza"
 msgid "Fade In Length"
 msgstr "Előtűnés hossza"
 
-msgstr "Előtűnés"
-
 #: translations.py:554
 #, fuzzy
 msgid "Wipe Direction"
