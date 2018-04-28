@@ -1155,12 +1155,16 @@ def display_clip_popup_menu(event, clip, track, callback):
         _add_separetor(clip_menu)
         
     if track.type == appconsts.VIDEO:
-
+        active = True
+        if clip.media_type == appconsts.IMAGE_SEQUENCE or clip.media_type == appconsts.IMAGE or clip.media_type == appconsts.PATTERN_PRODUCER:
+            active = False
         clip_menu.add(_get_menu_item(_("Split Audio"), callback,\
-                      (clip, track, "split_audio", event.x), True))
+                      (clip, track, "split_audio", event.x), active))
         if track.id == current_sequence().first_video_index:
             active = True
         else:
+            active = False
+        if clip.media_type == appconsts.IMAGE_SEQUENCE or clip.media_type == appconsts.IMAGE or clip.media_type == appconsts.PATTERN_PRODUCER:
             active = False
         clip_menu.add(_get_menu_item(_("Split Audio Synched"), callback,\
               (clip, track, "split_audio_synched", event.x), active))
@@ -1178,6 +1182,9 @@ def display_clip_popup_menu(event, clip, track, callback):
     audio_sync_item = _get_menu_item(_("Select Clip to Audio Sync With..."), callback, (clip, track, "set_audio_sync_clip", event.x))
     if utils.is_mlt_xml_file(clip.path) == True:
         audio_sync_item.set_sensitive(False)
+    if clip.media_type == appconsts.IMAGE_SEQUENCE or clip.media_type == appconsts.IMAGE or clip.media_type == appconsts.PATTERN_PRODUCER:
+        audio_sync_item.set_sensitive(False)
+ 
     clip_menu.add(audio_sync_item)
             
     _add_separetor(clip_menu)
@@ -1204,7 +1211,7 @@ def display_clip_popup_menu(event, clip, track, callback):
         active = True
     clip_menu.add(_get_compositors_add_menu_item(event, clip, track, callback, active))
     clip_menu.add(_get_auto_fade_compositors_add_menu_item(event, clip, track, callback, active))
-    clip_menu.add(_get_blenders_add_menu_item(event, clip, track, callback, active))
+    #clip_menu.add(_get_blenders_add_menu_item(event, clip, track, callback, active))
 
     _add_separetor(clip_menu)
     clip_menu.add(_get_clone_filters_menu_item(event, clip, track, callback))
@@ -1336,6 +1343,7 @@ def display_compositor_popup_menu(event, compositor, callback):
     autofollow_item.set_label(_("Obey Auto Follow"))
     autofollow_item.set_active(compositor.obey_autofollow)
     autofollow_item.connect("activate", callback, ("set auto follow", compositor))
+    autofollow_item.set_sensitive(editorstate.auto_follow_active())
     autofollow_item.show()
 
     compositor_menu.append(autofollow_item)
@@ -1395,8 +1403,8 @@ def _get_compositors_add_menu_item(event, clip, track, callback, sensitive):
     for i in range(0, len(mlttransitions.compositors)):
         compositor = mlttransitions.compositors[i]
         name, compositor_type = compositor
-        if compositor_type == "##affine":
-            continue
+        #if compositor_type == "##affine":
+        #    continue
         # Continue if compositor_type not present in system
         try:
             info = mlttransitions.mlt_compositor_transition_infos[compositor_type]
@@ -1406,12 +1414,20 @@ def _get_compositors_add_menu_item(event, clip, track, callback, sensitive):
         sub_menu.append(compositor_item)
         compositor_item.connect("activate", callback, (clip, track, "add_compositor", (event.x, compositor_type)))
         compositor_item.show()
+ 
+    _add_separetor(sub_menu)
+     
+    alpha_combiners_menu_item = _get_alpha_combiners_add_menu_item(event, clip, track, callback, sensitive)
+    sub_menu.append(alpha_combiners_menu_item)
+    blenders_menu_item  = _get_blenders_add_menu_item(event, clip, track, callback, sensitive)
+    sub_menu.append(blenders_menu_item)
+    
     menu_item.set_sensitive(sensitive)
     menu_item.show()
     return menu_item
 
 def _get_blenders_add_menu_item(event, clip, track, callback, sensitive):
-    menu_item = Gtk.MenuItem(_("Add Blend"))
+    menu_item = Gtk.MenuItem(_("Blenders"))
     sub_menu = Gtk.Menu()
     menu_item.set_submenu(sub_menu)
 
@@ -1426,6 +1442,22 @@ def _get_blenders_add_menu_item(event, clip, track, callback, sensitive):
     menu_item.show()
     return menu_item
 
+def _get_alpha_combiners_add_menu_item(event, clip, track, callback, sensitive):
+    menu_item = Gtk.MenuItem(_("Alpha Combiners"))
+    sub_menu = Gtk.Menu()
+    menu_item.set_submenu(sub_menu)
+
+    for i in range(0, len(mlttransitions.alpha_combiners)):
+        alpha_combiner = mlttransitions.alpha_combiners[i]
+        name, compositor_type = alpha_combiner
+        alpha_combiner_item = Gtk.MenuItem(name)
+        sub_menu.append(alpha_combiner_item)
+        alpha_combiner_item.connect("activate", callback, (clip, track, "add_compositor", (event.x, compositor_type)))
+        alpha_combiner_item.show()
+    menu_item.set_sensitive(sensitive)
+    menu_item.show()
+    return menu_item
+    
 def _get_auto_fade_compositors_add_menu_item(event, clip, track, callback, sensitive):
     menu_item = Gtk.MenuItem(_("Add Fade"))
     sub_menu = Gtk.Menu()
@@ -1880,7 +1912,7 @@ class BigTCDisplay:
                                                     22,
                                                     self._draw)
         self.font_desc = Pango.FontDescription("Bitstream Vera Sans Mono Condensed 15")
-
+        
         # Draw consts
         x = 2
         y = 2
@@ -1941,7 +1973,7 @@ class BigTCDisplay:
 
         PangoCairo.update_layout(cr, layout)
         PangoCairo.show_layout(cr, layout)
-
+                
     def _round_rect_path(self, cr):
         x, y, width, height, aspect, corner_radius, radius, degrees = self._draw_consts
 
@@ -2130,12 +2162,12 @@ class TracksNumbersSelect:
         self.widget = Gtk.HBox()
         
         self.video_label = Gtk.Label(_("Video:"))
-        self.video_tracks = Gtk.SpinButton.new_with_range(1, 8, 1)
+        self.video_tracks = Gtk.SpinButton.new_with_range(1, self.MAX_TRACKS, 1)
         self.video_tracks.set_value(v_tracks)
         self.video_tracks.connect("value-changed", self.video_tracks_changed)
         
         self.audio_label = Gtk.Label(_("Audio:"))
-        self.audio_tracks = Gtk.SpinButton.new_with_range(1, 8, 1)
+        self.audio_tracks = Gtk.SpinButton.new_with_range(0, self.MAX_TRACKS-1, 1)
         self.audio_tracks.set_value(a_tracks)
         self.audio_tracks.connect("value-changed", self.audio_tracks_changed)
         
@@ -2165,7 +2197,7 @@ class TracksNumbersSelect:
         self.set_total_tracks_info()
         
     def set_total_tracks_info(self):
-        self.tracks_amount_info.set_text(str(int(self.video_tracks.get_value() + self.audio_tracks.get_value())) + " / 9")
+        self.tracks_amount_info.set_text(str(int(self.video_tracks.get_value() + self.audio_tracks.get_value())) + " / " + str(self.MAX_TRACKS))
         self.tracks_amount_info.queue_draw ()
 
     def get_tracks(self):
@@ -2335,13 +2367,6 @@ def get_audio_levels_popup_menu(event, callback):
     thumbs_item.connect("activate", callback, "thumbs")
 
     menu.append(thumbs_item)
-
-    delta_overlay_item = Gtk.CheckMenuItem()
-    delta_overlay_item.set_label(_("Show Move/Trim Info Overlay"))
-    delta_overlay_item.set_active(editorpersistance.prefs.delta_overlay)
-    delta_overlay_item.connect("activate", callback, "delta_overlay")
-
-    menu.append(delta_overlay_item)
     
     _add_separetor(menu)
 
@@ -2351,14 +2376,7 @@ def get_audio_levels_popup_menu(event, callback):
     snapping_item.connect("activate", callback, "snapping")
 
     menu.append(snapping_item)
-
-    show_magnet_item = Gtk.CheckMenuItem()
-    show_magnet_item.set_label(_("Show Magnet Icon"))
-    show_magnet_item.set_active(snapping.show_magnet_icon)
-    show_magnet_item.connect("activate", callback, "magnet")
-
-    menu.append(show_magnet_item)
-
+    
     _add_separetor(menu)
 
     allways_item = Gtk.RadioMenuItem()

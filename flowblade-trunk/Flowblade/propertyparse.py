@@ -130,7 +130,6 @@ def get_args_num_value(val_str):
 
 # ------------------------------------------ kf editor values strings to kfs funcs
 def single_value_keyframes_string_to_kf_array(keyframes_str, out_to_in_func):
-    #print "keyframes_str", keyframes_str
     new_keyframes = []
     keyframes_str = keyframes_str.strip('"') # expression have sometimes quotes that need to go away
     kf_tokens = keyframes_str.split(";")

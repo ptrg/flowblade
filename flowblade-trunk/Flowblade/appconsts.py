@@ -67,7 +67,7 @@ PROP_EXPRESSION = 2
 
 # Display heights for tracks and timeline.
 TRACK_HEIGHT_NORMAL = 50 # track height in canvas and column
-TRACK_HEIGHT_SMALL = 25 # track height in canvas and column
+TRACK_HEIGHT_SMALL = 25  # track height in canvas and column
 TRACK_HEIGHT_SMALLEST = 25 # maybe remove this as it is no longer used
 TLINE_HEIGHT = 260
 
@@ -102,6 +102,8 @@ EXTRA_EDITOR = "extraeditor"
 
 # Available tracks maximum for Flowblade
 MAX_TRACKS = 9
+INIT_V_TRACKS = 5
+INIT_A_TRACKS = 4
 
 # Thumbnail image dimensions
 THUMB_WIDTH = 116

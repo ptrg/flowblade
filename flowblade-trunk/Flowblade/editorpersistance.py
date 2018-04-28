@@ -66,6 +66,13 @@ def load():
         write_file = file(prefs_file_path, "wb")
         pickle.dump(prefs, write_file)
 
+    # Override deprecated preferences to default values.
+    prefs.delta_overlay = True
+    prefs.auto_play_in_clip_monitor = False
+    prefs.empty_click_exits_trims = True
+    prefs.quick_enter_trims = True
+    prefs.remember_monitor_clip_frame = True
+
     try:
         f = open(recents_file_path)
         recent_projects = pickle.load(f)
@@ -89,8 +96,9 @@ def load():
         
     # Versions of program may have different prefs objects and 
     # we may need to to update prefs on disk if user has e.g.
-    # installed later version of Flowblade
+    # installed later version of Flowblade.
     current_prefs = EditorPreferences()
+
     if len(prefs.__dict__) != len(current_prefs.__dict__):
         current_prefs.__dict__.update(prefs.__dict__)
         prefs = current_prefs
@@ -179,10 +187,9 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     
     # Jul-2016 - SvdB - Added play_pause_button
     # Apr-2017 - SvdB - Added ffwd / rev values
-    gfx_length_spin, trim_exit_on_empty, trim_quick_enter, remember_clip_frame, \
-    overwrite_clip_drop, cover_delete, mouse_scroll_action, hide_file_ext_button = edit_prefs_widgets
+    gfx_length_spin, overwrite_clip_drop, cover_delete, mouse_scroll_action, hide_file_ext_button = edit_prefs_widgets
     
-    auto_play_in_clip_monitor_check, auto_center_check, play_pause_button, auto_center_on_updown, \
+    auto_center_check, play_pause_button, auto_center_on_updown, \
     ffwd_rev_shift_spin, ffwd_rev_ctrl_spin, ffwd_rev_caps_spin = playback_prefs_widgets
     
     use_english, disp_splash, buttons_style, dark_theme, theme_combo, audio_levels_combo, window_mode_combo, full_names, double_track_hights = view_prefs_widgets
@@ -200,12 +207,8 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     prefs.undos_max = undo_max_spin.get_adjustment().get_value()
     prefs.media_load_order = load_order_combo.get_active()
 
-    prefs.auto_play_in_clip_monitor = auto_play_in_clip_monitor_check.get_active()
     prefs.auto_center_on_play_stop = auto_center_check.get_active()
     prefs.default_grfx_length = int(gfx_length_spin.get_adjustment().get_value())
-    prefs.empty_click_exits_trims = trim_exit_on_empty.get_active()
-    prefs.quick_enter_trims = trim_quick_enter.get_active()
-    prefs.remember_monitor_clip_frame = remember_clip_frame.get_active()
     prefs.overwrite_clip_drop = (overwrite_clip_drop.get_active() == 0)
     prefs.trans_cover_delete = cover_delete.get_active()
     # Jul-2016 - SvdB - For play/pause button
@@ -271,7 +274,7 @@ class EditorPreferences:
         self.auto_save_delay_value_index = 1 # value is index of AUTO_SAVE_OPTS in preferenceswindow._general_options_panel()
         self.undos_max = UNDO_STACK_DEFAULT
         self.default_profile_name = 10 # index of default profile
-        self.auto_play_in_clip_monitor = False
+        self.auto_play_in_clip_monitor = False  # DEPRECATED, NOT USER SETTABLE ANYMORE
         self.auto_center_on_play_stop = False
         self.thumbnail_folder = None
         self.hidden_profile_names = []
@@ -293,10 +296,10 @@ class EditorPreferences:
         self.buttons_style = GLASS_STYLE
         self.dark_theme = False
         self.remember_last_render_dir = True
-        self.empty_click_exits_trims = True
-        self.quick_enter_trims = True
+        self.empty_click_exits_trims = True # DEPRECATED, NOT USER SETTABLE ANYMORE
+        self.quick_enter_trims = True # DEPRECATED, NOT USER SETTABLE ANYMORE
         self.show_vu_meter = True
-        self.remember_monitor_clip_frame = True
+        self.remember_monitor_clip_frame = True # DEPRECATED, NOT USER SETTABLE ANYMORE
         self.jack_start_up_op = appconsts.JACK_ON_START_UP_NO # not used
         self.jack_frequency = 48000 # not used 
         self.jack_output_type = appconsts.JACK_OUT_AUDIO # not used
@@ -327,5 +330,5 @@ class EditorPreferences:
         self.ffwd_rev_caps = 1
         self.shortcuts = "flowblade.xml"
         self.double_track_hights = False
-        self.delta_overlay = True
+        self.delta_overlay = True # DEPRECATED, NOT USER SETTABLE ANYMORE
         self.show_alpha_info_message = True

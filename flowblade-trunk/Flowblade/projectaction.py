@@ -385,8 +385,8 @@ def _close_dialog_callback(dialog, response_id):
         return
         
     # This is the same as opening default project
-    sequence.AUDIO_TRACKS_COUNT = 4
-    sequence.VIDEO_TRACKS_COUNT = 5
+    sequence.AUDIO_TRACKS_COUNT = appconsts.INIT_A_TRACKS
+    sequence.VIDEO_TRACKS_COUNT = appconsts.INIT_V_TRACKS
 
     new_project = projectdata.get_default_project()
     app.open_project(new_project)
@@ -890,7 +890,7 @@ def _add_image_sequence_callback(dialog, response_id, data):
 
     file_chooser, spin = data
     frame_file = file_chooser.get_filename()
-    dialog.destroy()
+    ttl = int(spin.get_value())
     
     if frame_file == None:
         dialogutils.info_message(_("No file was selected"), _("Select a numbered file to add an Image Sequence to Project."), gui.editor_window.window)
@@ -932,9 +932,9 @@ def _add_image_sequence_callback(dialog, response_id, data):
     dialog.destroy()
 
     resource_path = folder + "/" + resource_name_str
-    length = highest_number_part - int(number_part)
+    length = (highest_number_part - int(number_part)) * ttl
 
-    PROJECT().add_image_sequence_media_object(resource_path, file_name + "(img_seq)", length)
+    PROJECT().add_image_sequence_media_object(resource_path, file_name + "(img_seq)", length, ttl)
 
     gui.media_list_view.fill_data_model()
     gui.bin_list_view.fill_data_model()
@@ -1051,7 +1051,7 @@ def media_file_name_edited(dialog, response_id, data):
 
 def _display_file_info(media_file):
     # get info
-    clip = current_sequence().create_file_producer_clip(media_file.path)
+    clip = current_sequence().create_file_producer_clip(media_file.path, None, False, media_file.ttl)
     info = utils.get_file_producer_info(clip)
 
     width = info["width"]
@@ -1457,7 +1457,8 @@ def sequence_name_edited(cell, path, new_text, user_data):
     _enable_save()
 
 def change_sequence_track_count():
-    dialogs.tracks_count_change_dialog(_change_track_count_dialog_callback)
+    nv, na = PROJECT().c_seq.get_track_counts()
+    dialogs.tracks_count_change_dialog(_change_track_count_dialog_callback, nv, na)
 
 def _change_track_count_dialog_callback(dialog, response_id, tracks_select):
     if response_id != Gtk.ResponseType.ACCEPT:

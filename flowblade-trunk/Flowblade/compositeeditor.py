@@ -145,12 +145,13 @@ def set_enabled(value):
     widgets.reset_b.set_sensitive(value)
 
     if compositor == None or (compositor.transition.info.auto_fade_compositor == False \
-        and mlttransitions.is_blender(compositor.transition.info.name) == False):
+        and mlttransitions.is_blender(compositor.transition.info.name) == False \
+        and mlttransitions.is_alpha_combiner(compositor.transition.info.name) == False):
         widgets.fade_in_b.set_sensitive(value)
         widgets.fade_out_b.set_sensitive(value)
         widgets.fade_in_spin.set_sensitive(value)
         widgets.fade_out_spin.set_sensitive(value)
-    else: # Autofade compositors or blenders don't use these buttons
+    else: # Autofade compositors, alpha combiners or blenders don't use these buttons
         widgets.fade_in_b.set_sensitive(False)
         widgets.fade_out_b.set_sensitive(False)
         widgets.fade_in_spin.set_sensitive(False)
@@ -231,6 +232,7 @@ def _display_compositor_edit_box():
     t_editable_properties = propertyedit.get_transition_editable_properties(compositor)
     for ep in t_editable_properties:
         editor_row = propertyeditorbuilder.get_editor_row(ep)
+            
         if editor_row != None: # Some properties don't have editors
             vbox.pack_start(editor_row, False, False, 0)
             vbox.pack_start(guicomponents.EditorSeparator().widget, False, False, 0)

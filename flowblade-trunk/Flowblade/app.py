@@ -77,6 +77,7 @@ import preferenceswindow
 import projectaction
 import projectdata
 import projectinfogui
+import propertyeditorbuilder
 import proxyediting
 import render
 import renderconsumer
@@ -149,7 +150,7 @@ def main(root_path):
         editorstate.mlt_version = "0.0.99" # magic string for "not found"
 
 
-    print "SDL version:", str(editorstate.get_sdl_version())
+    #print "SDL version:", str(editorstate.get_sdl_version())
     
     # passing -xdg as a flag will change the user_dir location with XDG_CONFIG_HOME
     # For full xdg-app support all the launch processes need to add this too, currently not impl.
@@ -384,6 +385,9 @@ def monkeypatch_callbacks():
     # Snapping is done in a separate module but needs some tlinewidgets state info
     snapping._get_frame_for_x_func = tlinewidgets.get_frame
     snapping._get_x_for_frame_func = tlinewidgets._get_frame_x
+
+    # Callback to reinit to change slider <-> kf editor
+    propertyeditorbuilder.re_init_editors_for_slider_type_change_func = clipeffectseditor.effect_selection_changed
 
     # These provide clues for further module refactoring 
 

@@ -71,11 +71,12 @@ wipe_lumas = None # User displayed name -> resource image
 compositors = None
 blenders = None
 autofades = None
+alpha_combiners = None
 
 def init_module():
 
     # translations and module load order make us do this in method instead of at module load
-    global wipe_lumas, compositors, blenders, name_for_type, rendered_transitions, single_track_render_type_names, autofades
+    global wipe_lumas, compositors, blenders, name_for_type, rendered_transitions, single_track_render_type_names, autofades, alpha_combiners
     wipe_lumas = { \
                 _("Vertical From Center"):"bi-linear_x.pgm",
                 _("Vertical Top to Bottom"):"wipe_top_to_bottom.svg",
@@ -123,13 +124,13 @@ def init_module():
                 _("Checkerboard"):"checkerboard_small.pgm"}
 
     # name -> mlt_compositor_transition_infos key dict.
-    unsorted_compositors = [ (_("Affine"),"##affine"),
-                             (_("Dissolve"),"##opacity_kf"),
+    unsorted_compositors = [ (_("Dissolve"),"##opacity_kf"),
                              (_("Picture in Picture"),"##pict_in_pict"),
                              (_("Region"), "##region"),
                              (_("Affine Blend"), "##affineblend"),
                              (_("Blend"), "##blend"),
-                             (_("Wipe Clip Length"),"##wipe")]
+                             (_("Wipe Clip Length"),"##wipe"),
+                             (_("Transform"),"##affine")]
 
     compositors = sorted(unsorted_compositors, key=lambda comp: comp[0])   
 
@@ -157,6 +158,15 @@ def init_module():
     autofades = [(_("Fade In"),"##auto_fade_in"),
                 (_("Fade Out"),"##auto_fade_out")]
     
+    alpha_combiners = [ (_("Alpha XOR"),"##alphaxor"),
+                        (_("Alpha Out"),"##alphaout"),
+                        (_("Alpha In"),"##alphain")]
+
+    """ These ain't doing correct Porter-Duff
+                        (_("Alpha Over"),"##alphaover"),
+                        (_("Alpha Atop"),"##alphaatop")]
+    """
+                        
     for comp in compositors:
         name, comp_type = comp
         name_for_type[comp_type] = name
@@ -167,6 +177,10 @@ def init_module():
 
     for fade in autofades:
         name, comp_type = fade
+        name_for_type[comp_type] = name
+
+    for acomb in alpha_combiners:
+        name, comp_type = acomb
         name_for_type[comp_type] = name
         
     # Rendered transition names and types
@@ -295,7 +309,7 @@ class CompositorTransition:
             fval = 1
         else:
             fval = 0
-        self.mlt_transition.set("force_track",str(fval))
+        self.mlt_transition.set("force_track", str(fval))
 
     def update_editable_mlt_properties(self):
         for prop in self.properties:
@@ -433,6 +447,15 @@ def is_blender(compositor_type_test):
     
     return False
 
+def is_alpha_combiner(compositor_type_test):
+    for acomb in alpha_combiners:
+        name, compositor_type = acomb
+        if compositor_type_test == compositor_type:
+            return True
+    
+    return False
+
+
 # ------------------------------------------------------ rendered transitions
 # These are tractor objects used to create rendered transitions.
 def get_rendered_transition_tractor(current_sequence, 
@@ -450,7 +473,7 @@ def get_rendered_transition_tractor(current_sequence,
     
     # New from clip
     if orig_from.media_type != appconsts.PATTERN_PRODUCER:
-        from_clip = current_sequence.create_file_producer_clip(orig_from.path)# File producer
+        from_clip = current_sequence.create_file_producer_clip(orig_from.path, None, False, orig_from.ttl)# File producer
     else:
         from_clip = current_sequence.create_pattern_producer(orig_from.create_data) # pattern producer
     current_sequence.clone_clip_and_filters(orig_from, from_clip)
@@ -458,7 +481,7 @@ def get_rendered_transition_tractor(current_sequence,
     # New to clip
     if not(transition_type == RENDERED_FADE_IN or transition_type == RENDERED_FADE_OUT): # fades to not use to_clip
         if orig_to.media_type != appconsts.PATTERN_PRODUCER:
-            to_clip = current_sequence.create_file_producer_clip(orig_to.path)# File producer
+            to_clip = current_sequence.create_file_producer_clip(orig_to.path, None, False, orig_to.ttl)# File producer
         else:
             to_clip = current_sequence.create_pattern_producer(orig_to.create_data) # pattern producer
         current_sequence.clone_clip_and_filters(orig_to, to_clip)
