@@ -55,6 +55,7 @@ MB_BUTTON_Y = 4
 MB_BUTTON_IMAGE_Y = 6
 
 GMIC_BUTTONS_WIDTH = 250
+NATRON_BUTTONS_WIDTH = 100
 
 M_PI = math.pi
 
@@ -64,8 +65,7 @@ NO_HIT = -1
 DEFAULT_FOCUS_GROUP = "default_focus_group"
 focus_groups = {DEFAULT_FOCUS_GROUP:[]}
 
-#FLAT_COLOR_LIGHT = (0.9, 0.9, 0.9)
-#FLAT_COLOR_DARK = (0.25, 0.25, 0.25)
+
 
 class AbstractGlassButtons:
 
@@ -445,6 +445,8 @@ class GmicButtons(AbstractGlassButtons):
         self.button_x = mid_x - (buttons_width / 2)
         self._draw_buttons(cr, w, h)
 
+
+
 class GlassButtonsGroup(AbstractGlassButtons):
 
     def __init__(self, button_width, button_height, button_y, image_x_default, image_y_default, focus_group=DEFAULT_FOCUS_GROUP):
@@ -487,6 +489,7 @@ class GlassButtonsGroup(AbstractGlassButtons):
             release_func()
         self.pressed_button = -1
         self.widget.queue_draw()
+
 
 
 class GlassButtonsToggleGroup(GlassButtonsGroup):    

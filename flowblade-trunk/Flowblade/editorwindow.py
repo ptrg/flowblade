@@ -70,6 +70,7 @@ import titler
 import tlineaction
 import tlinewidgets
 import trackaction
+import toolnatron
 import updater
 import undo
 
@@ -194,6 +195,7 @@ class EditorWindow:
             ('ThreepointOverWriteClip', None, _('Three Point Overwrite'), None, None, lambda a:tlineaction.three_point_overwrite_pressed()),
             ('RangeOverWriteClip', None, _('Range Overwrite'), None, None, lambda a:tlineaction.range_overwrite_pressed()),
             ('CutClip', None, _('Cut Clip'), None, None, lambda a:tlineaction.cut_pressed()),
+            ('SequenceSplit', None, _('Sequence Split'), None, None, lambda a:tlineaction.sequence_split_pressed()),
             ('DeleteClip', None, _('Lift'), None, None, lambda a:tlineaction.lift_button_pressed()),
             ('SpliceOutClip', None, _('Splice Out'), None, None, lambda a:tlineaction.splice_out_button_pressed()),
             ('ResyncSelected', None, _('Resync'), None, None, lambda a:tlineaction.resync_button_pressed()),
@@ -245,6 +247,7 @@ class EditorWindow:
             ('Titler', None, _('Titler'), None, None, lambda a:titler.show_titler()),
             ('AudioMix', None, _('Audio Mixer'), None, None, lambda a:audiomonitoring.show_audio_monitor()),
             ('GMIC', None, _("G'MIC Effects"), None, None, lambda a:gmic.launch_gmic()),
+            ('NatronAnimations', None, _("Natron Animations"),None, None, lambda a:toolnatron.launch_natron_animations_tool()),
             ('MediaLink', None, _('Media Relinker'), None, None, lambda a:medialinker.display_linker()),
             ('HelpMenu', None, _('_Help')),
             ('QuickReference', None, _('Contents'), None, None, lambda a:menuactions.quick_reference()),
@@ -295,6 +298,7 @@ class EditorWindow:
                     </menu>
                     <separator/>
                     <menuitem action='CutClip'/>
+                    <menuitem action='SequenceSplit'/>
                     <separator/>
                     <menuitem action='SpliceOutClip'/>
                     <menuitem action='DeleteClip'/>
@@ -363,6 +367,7 @@ class EditorWindow:
                     <separator/>
                     <menuitem action='Titler'/>
                     <menuitem action='GMIC'/>
+                    <menuitem action='NatronAnimations'/>
                     <separator/>
                     <menuitem action='MediaLink'/>
                 </menu>

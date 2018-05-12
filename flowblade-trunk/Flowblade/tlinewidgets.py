@@ -435,6 +435,12 @@ def get_pos_for_tline_centered_to_current_frame():
     else:
         return current_frame - (frames_in_panel / 2)
 
+def get_last_tline_view_frame():
+    allocation = canvas_widget.widget.get_allocation()
+    x, y, w, h = allocation.x, allocation.y, allocation.width, allocation.height
+    frames_in_panel = w / pix_per_frame
+    return int(pos + frames_in_panel)
+
 def get_frame(panel_x):
     """
     Returns frame for panel x position
@@ -1532,7 +1538,7 @@ class TimeLineCanvas:
         if len(track.clips) != end:
             end = end + 1
             
-        # Get frame of clip.clip_in_in on timeline.
+        # Get frame of clip.clip_in on timeline.
         clip_start_in_tline = track.clip_start(start)
 
         # Pos is the first drawn frame.
