@@ -26,12 +26,9 @@ import dialogutils
 import editorpersistance
 import gui
 import guiutils
-import guicomponents
 import mltprofiles
 # Jan-2017 - SvdB - To get the number of CPU cores
 import multiprocessing
-# Apr-2017 - SvdB
-import shortcuts
 
 PREFERENCES_WIDTH = 730
 PREFERENCES_HEIGHT = 440
@@ -169,6 +166,7 @@ def _edit_prefs_panel():
     gfx_length_spin.set_adjustment(spin_adj)
     gfx_length_spin.set_numeric(True)
 
+    """
     overwrite_clip_drop = Gtk.ComboBoxText()
     active = 0
     if prefs.overwrite_clip_drop == False:
@@ -176,7 +174,8 @@ def _edit_prefs_panel():
     overwrite_clip_drop.append_text(_("Overwrite blanks"))
     overwrite_clip_drop.append_text(_("Always insert"))
     overwrite_clip_drop.set_active(active)
-
+    """
+    
     cover_delete = Gtk.CheckButton()
     cover_delete.set_active(prefs.trans_cover_delete)
     
@@ -194,7 +193,7 @@ def _edit_prefs_panel():
     
     # Layout
     row4 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Graphics default length:")), gfx_length_spin, PREFERENCES_LEFT))
-    row8 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Media drag'n'drop action on non-V1 tracks:")), overwrite_clip_drop, PREFERENCES_LEFT))
+    #row8 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Media drag'n'drop action on non-V1 tracks:")), overwrite_clip_drop, PREFERENCES_LEFT))
     row9 = _row(guiutils.get_checkbox_row_box(cover_delete, Gtk.Label(label=_("Cover Transition/Fade clips on delete if possible"))))
     # Jul-2016 - SvdB - For play_pause button
     row11 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Mouse Middle Button Scroll Action:")), mouse_scroll_action, PREFERENCES_LEFT))
@@ -204,7 +203,7 @@ def _edit_prefs_panel():
     vbox = Gtk.VBox(False, 2)
     vbox.pack_start(row4, False, False, 0)
     vbox.pack_start(row9, False, False, 0)
-    vbox.pack_start(row8, False, False, 0)
+    #vbox.pack_start(row8, False, False, 0)
     vbox.pack_start(row11, False, False, 0)
     vbox.pack_start(row12, False, False, 0)
     vbox.pack_start(Gtk.Label(), True, True, 0)
@@ -213,7 +212,7 @@ def _edit_prefs_panel():
 
     # Jul-2016 - SvdB - Added play_pause_button
     # Apr-2017 - SvdB - Added ffwd / rev values
-    return vbox, (gfx_length_spin, overwrite_clip_drop, cover_delete,
+    return vbox, (gfx_length_spin, cover_delete,
                   mouse_scroll_action, hide_file_ext_button)
 
 def _playback_prefs_panel():
@@ -317,18 +316,15 @@ def _view_prefs_panel():
     buttons_combo = Gtk.ComboBoxText()
     buttons_combo.append_text(_("Glass"))
     buttons_combo.append_text(_("Simple"))
-    if prefs.buttons_style == editorpersistance.GLASS_STYLE:
-        buttons_combo.set_active(0)
-    else:
-        buttons_combo.set_active(1)
+    buttons_combo.append_text(_("No Decorations"))
+    buttons_combo.set_active( prefs.buttons_style )
 
     dark_combo = Gtk.ComboBoxText()
-    dark_combo.append_text(_("Light Theme"))
+    dark_combo.append_text(_("Flowblade Theme"))
     dark_combo.append_text(_("Dark Theme"))
-    if prefs.dark_theme == True:
-        dark_combo.set_active(1)
-    else:
-        dark_combo.set_active(0)
+    dark_combo.append_text(_("Light Theme"))
+    dark_combo.set_active(prefs.theme)
+
 
     theme_combo = Gtk.ComboBoxText()
     for theme in gui._THEME_COLORS:

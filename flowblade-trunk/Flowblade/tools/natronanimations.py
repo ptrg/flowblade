@@ -19,7 +19,6 @@
 """
 
 import copy
-import md5
 import os
 import xml.dom.minidom
 
@@ -42,6 +41,8 @@ PROPERTY = appconsts.PROPERTY
 NATRON_NODE_NAME_ATTR = "nodename"
 NATRON_PROPERTY_NAME_ATTR = "natronpropertyname"
 
+NEWLINE = "\n"
+QUOTE = "\""
 
 _scripts = None
 _animations_groups = []
@@ -63,7 +64,7 @@ class NatronAnimationInfo:
 
         self.length = anim_node.getElementsByTagName(LENGTH_NODE).item(0).firstChild.nodeValue
 
-        # property name -> natron_node, natron_property, interpretation, args
+        # Create dict for interpretations for each property: property name -> (natron_node, natron_property, interpretation, args)
         self.interpretations = {}
         for i_node in self.interpretation_node_list:
             natron_node = i_node.getAttribute(NATRON_NODE_NAME_ATTR)
@@ -85,9 +86,8 @@ class NatronAnimationInfo:
 
 class NatronAnimationInstance:
     def __init__(self, natron_animation_info, profile):
-        self.uid = md5.new(os.urandom(16)).hexdigest()
         self.info = natron_animation_info
-        self.profile = profile
+        self.profile_desc = profile.description()
         self.properties = copy.deepcopy(natron_animation_info.properties)
 
         self.range_in = 1
@@ -101,23 +101,26 @@ class NatronAnimationInstance:
         # numerical values that depend on the profile we have. These need
         # to be replaced now that we have profile and we are ready to connect this.
         # For example default values of some properties depend on the screen size of the project
-        propertyparse.replace_value_keywords(self.properties, self.profile)
+        propertyparse.replace_value_keywords(self.properties, profile)
         
-    def write_out_modify_data(self, editable_properties):
-        exec_str = self._get_natron_modifying_exec_string(editable_properties)
+    def write_out_modify_data(self, editable_properties, uid, format_index):
+        exec_str = self._get_profile_setting_exec_str(format_index)
+        exec_str += self._get_natron_modifying_exec_string(editable_properties)
+        #exec_str += self._get_test_exec_str()
+        
         print exec_str
-        export_data_file = open(self.get_modify_exec_data_file_path(), "w")
+        export_data_file = open(self.get_modify_exec_data_file_path(uid), "w")
         export_data_file.write(exec_str)
         export_data_file.close()
 
         # NOTE: THIS CAN BREAK IF 2 ANIMATION RENDERS ARE STARTED VERY CLOSELY TO EACH OTHER AND WE READ WRONG SESSION FROM THIS FILE
         # IN PRACTICE WE CAN GET AWAY WITH IT, BUT LOOK BETTER STUFF
         render_session_id_file = open(self.get_render_session_id_file_path(), "w")
-        render_session_id_file.write(self.uid)
+        render_session_id_file.write(uid)
         render_session_id_file.close()
 
-    def get_modify_exec_data_file_path(self):
-        return utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/mod_data_" +  self.uid
+    def get_modify_exec_data_file_path(self, uid):
+        return utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/session_" + uid + "/mod_data"
 
     def get_render_session_id_file_path(self):
         return utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/LATEST_RENDER_INSTANCE_ID"
@@ -131,6 +134,20 @@ class NatronAnimationInstance:
         
         return exec_str
 
+    def _get_profile_setting_exec_str(self, format_index):
+        exec_str = "formatType = app.Write1.getParam(" + QUOTE + "formatType" + QUOTE +  ")"  + NEWLINE 
+        exec_str += "formatType.setValue(2)"  + NEWLINE 
+        exec_str += "formatParam = app.Write1.getParam(" + QUOTE + "NatronParamFormatChoice" + QUOTE +  ")"  + NEWLINE 
+        exec_str += "formatParam.setValue(" + str(format_index) + ")"  + NEWLINE   
+        
+        return exec_str
+
+    # used for quick'n'dirty testing during dev
+    def _get_test_exec_str(self):
+        exec_str = "app.Text1_3.center.set(100, 100, 0)" + NEWLINE   
+        exec_str += "app.Text1_3.center.set(400, 400, 100)" + NEWLINE   
+        return exec_str
+        
     def get_length(self):
         return self.range_out - self.range_in + 1 # # +1 out incl.
 

@@ -30,15 +30,19 @@ from gi.repository import Pango
 
 import cairo
 import locale
+import md5
 import mlt
 import os
+import pickle
 import shutil
 import subprocess
 import sys
 import threading
 import time
+import webbrowser
 
 import appconsts
+import atomicfile
 import cairoarea
 import editorstate
 import editorpersistance
@@ -67,6 +71,29 @@ EDIT_PANEL_HEIGHT = 250
 MONITOR_WIDTH = 700
 MONITOR_HEIGHT = 400
 
+# Indexes here correspond to "NatronParamFormatChoice" Param values
+NATRON_DEFAULT_RENDER_FORMAT = 6
+NATRON_RENDER_FORMATS = [   "PC_Video 640x480 (PC_Video)",
+                            "NTSC 720x486 0.91 (NTSC)",
+                            "PAL 720x576 1.09 (PAL)",
+                            "NTSC_16:9 720x486 1.21 (NTSC_16:9)",
+                            "PAL_16:9 720x576 1.46 (PAL_16:9)",
+                            "HD_720 1280x720 (HD_720)",
+                            "HD 1920x1080 (HD)",
+                            "UHD_4K 3840x2160 (UHD_4K)",
+                            "1K_Super_35(full-ap) 1024x778 (1K_Super_35(full-ap))",
+                            "1K_Cinemascope 914x778 2.00 (1K_Cinemascope)",
+                            "2K_Super_35(full-ap) 2048x1556 (2K_Super_35(full-ap))",
+                            "2K_Cinemascope 1828x1556 2.00 (2K_Cinemascope)",
+                            "2K_DCP 2048x1080 (2K_DCP)",
+                            "4K_Super_35(full-ap) 4096x3112 (4K_Super_35(full-ap))",
+                            "4K_Cinemascope 3656x3112 2.00 (4K_Cinemascope)",
+                            "4K_DCP 4096x2160 (4K_DCP)",
+                            "square_256 256x256 (square_256)",
+                            "square_512 512x512 (square_512)",
+                            "square_1K 1024x1024 (square_1K)",
+                            "square_2K 2048x2048 (square_2K)" ]
+        
 # module global data
 _animation_instance = None
 _window = None
@@ -74,32 +101,23 @@ _animations_menu = Gtk.Menu()
 _hamburger_menu = Gtk.Menu()
 _current_preview_surface = None
 _profile = None
+_session_id = None
 
 # ------------------------------------------ launch, close
-def launch_tool_window():
-    # This is single instance tool
-    if _window != None:
-        return
-        
-    global _animation_instance
-    _animation_instance = natronanimations.get_default_animation_instance() # This duck types for mltfilters.FilterObject
-        
-    global _window
-    _window = NatronAnimatationsToolWindow()
-
 def _shutdown():
+
+    global _window
     
     _window.set_visible(False)
     _window.destroy()
-
-    global _window
     _window = None
 
+    # Delete session folder
+    shutil.rmtree(get_session_folder())
+    
 # ------------------------------------------ process main
 def main(root_path, force_launch=False):
-    
-    print "Pillumarallaaaaa"
-    
+
     gtk_version = "%s.%s.%s" % (Gtk.get_major_version(), Gtk.get_minor_version(), Gtk.get_micro_version())
     editorstate.gtk_version = gtk_version
     try:
@@ -108,14 +126,10 @@ def main(root_path, force_launch=False):
         editorstate.mlt_version = "0.0.99" # magic string for "not found"
 
     global _session_id
-    _session_id = int(time.time() * 1000) # good enough
+    _session_id = md5.new(os.urandom(16)).hexdigest()
 
     # Set paths.
     respaths.set_paths(root_path)
-
-    # Write stdout to log file
-    #sys.stdout = open(utils.get_hidden_user_dir_path() + "log_gmic", 'w')
-    #print "G'MIC version:", str(_gmic_version)
 
     # Init session folders
     if os.path.exists(get_session_folder()):
@@ -125,8 +139,7 @@ def main(root_path, force_launch=False):
 
     # Load editor prefs and list of recent projects
     editorpersistance.load()
-    if editorpersistance.prefs.dark_theme == True:
-        respaths.apply_dark_theme()
+
 
     # Init translations module with translations data
     translations.init_languages()
@@ -136,7 +149,6 @@ def main(root_path, force_launch=False):
     # Load aniamtions data
     natronanimations.load_animations_projects_xml()
 
-        
     # Init gtk threads
     Gdk.threads_init()
     Gdk.threads_enter()
@@ -153,9 +165,11 @@ def main(root_path, force_launch=False):
         MONITOR_HEIGHT = 400 # initial value, this gets changed when material is loaded
     """
     
-    # Request dark them if so desired
-    if editorpersistance.prefs.dark_theme == True:
+    # Request dark theme if so desired
+    if editorpersistance.prefs.theme != appconsts.LIGHT_THEME:
         Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", True)
+        if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
+            gui.apply_gtk_css()
 
     # We need mlt fpr profiles handling
     repo = mlt.Factory().init()
@@ -177,13 +191,13 @@ def main(root_path, force_launch=False):
     gui.load_current_colors()
     
     # Set launch profile
-    profile_name = sys.argv[1].replace("_", " ") # we had underscores to pass as single arg
+    profile_name = sys.argv[1].replace("_", " ") # we had underscores put in to pass as single arg
     print profile_name
     global _profile
     _profile = mltprofiles.get_profile(profile_name)
     
     global _animation_instance
-    _animation_instance = natronanimations.get_default_animation_instance(_profile) # This duck types for mltfilters.FilterObject
+    _animation_instance = natronanimations.get_default_animation_instance(_profile)
         
     global _window
     _window = NatronAnimatationsToolWindow()
@@ -267,21 +281,12 @@ class NatronAnimatationsToolWindow(Gtk.Window):
         pos_bar_frame.set_margin_bottom(4)
         pos_bar_frame.set_margin_left(6)
         pos_bar_frame.set_margin_right(2)
-        
-        """
-        self.control_buttons = glassbuttons.GmicButtons()
-        pressed_callback_funcs = [prev_pressed,
-                                  next_pressed]
-                                  
-        self.control_buttons.set_callbacks(pressed_callback_funcs)
-        """
-        
+                
         self.preview_button = Gtk.Button(_("Preview Frame"))
         self.preview_button.connect("clicked", lambda w: render_preview_frame())
                             
         control_panel = Gtk.HBox(False, 2)
         control_panel.pack_start(pos_bar_frame, True, True, 0)
-        #control_panel.pack_start(self.control_buttons.widget, False, False, 0)
         control_panel.pack_start(guiutils.pad_label(2, 2), False, False, 0)
         control_panel.pack_start(self.preview_button, False, False, 0)
         
@@ -346,6 +351,18 @@ class NatronAnimatationsToolWindow(Gtk.Window):
         encode_row.pack_start(Gtk.Label(), True, True, 0)
         encode_row.set_margin_bottom(6)
 
+        format_label = Gtk.Label(_("Natron Render Format:"))
+        self.format_selector = Gtk.ComboBoxText() # filled later when current sequence known
+        for format_desc in NATRON_RENDER_FORMATS:
+            self.format_selector.append_text(format_desc)
+        self.format_selector.set_active(NATRON_DEFAULT_RENDER_FORMAT)
+
+        format_select_row = Gtk.HBox(False, 2)
+        format_select_row.pack_start(format_label, False, False, 0)
+        format_select_row.pack_start(guiutils.pad_label(12, 2), False, False, 0)
+        format_select_row.pack_start(self.format_selector, False, False, 0)
+        format_select_row.set_margin_top(24)
+
         self.render_percentage = Gtk.Label("")
         
         self.status_no_render = _("Set Frames Folder for valid render")
@@ -364,7 +381,7 @@ class NatronAnimatationsToolWindow(Gtk.Window):
         self.render_progress_bar.set_valign(Gtk.Align.CENTER)
 
         self.stop_button = guiutils.get_sized_button(_("Stop"), 100, 32)
-        self.stop_button.connect("clicked", lambda w:abort_render())
+        #self.stop_button.connect("clicked", lambda w:abort_render())
         self.render_button = guiutils.get_sized_button(_("Render"), 100, 32)
         self.render_button.connect("clicked", lambda w:render_output())
 
@@ -378,6 +395,7 @@ class NatronAnimatationsToolWindow(Gtk.Window):
         render_vbox.pack_start(encode_row, False, False, 0)
         render_vbox.pack_start(Gtk.Label(), True, True, 0)
         render_vbox.pack_start(out_folder_row, False, False, 0)
+        render_vbox.pack_start(format_select_row, False, False, 0)
         render_vbox.pack_start(Gtk.Label(), True, True, 0)
         render_vbox.pack_start(render_status_row, False, False, 0)
         render_vbox.pack_start(render_row, False, False, 0)
@@ -410,6 +428,7 @@ class NatronAnimatationsToolWindow(Gtk.Window):
         right_panel.pack_start(control_panel, False, False, 0)
         right_panel.pack_start(range_row, False, False, 0)
         right_panel.pack_start(render_vbox, True, True, 0)
+    
         right_panel.set_margin_left(4)
         
         sides_pane = Gtk.HBox(False, 2)
@@ -436,8 +455,6 @@ class NatronAnimatationsToolWindow(Gtk.Window):
 
         self.update_render_status_info()
         self.change_animation()
-
-
 
     def change_animation(self):
 
@@ -644,31 +661,94 @@ def show_menu(event, callback):
     _animations_menu.show_all()
     _animations_menu.popup(None, None, None, None, event.button, event.time)
 
-def _hamburger_launch_pressed(self, widget, event):
+def _hamburger_launch_pressed(widget, event):
     menu = _hamburger_menu
     guiutils.remove_children(menu)
     
-    menu.add(_get_menu_item(_("Load Clip") + "...", _hamburger_menu_callback, "load" ))
-    menu.add(_get_menu_item(_("G'Mic Webpage"), _hamburger_menu_callback, "docs" ))
+    menu.add(_get_menu_item(_("Load Animation") + "...", _hamburger_menu_callback, "load" ))
+    menu.add(_get_menu_item(_("Save Animation") + "...", _hamburger_menu_callback, "save" ))
+    _add_separetor(menu)
+    menu.add(_get_menu_item(_("Natron Webpage"), _hamburger_menu_callback, "web" ))
     _add_separetor(menu)
     menu.add(_get_menu_item(_("Close"), _hamburger_menu_callback, "close" ))
     
     menu.popup(None, None, None, None, event.button, event.time)
-        
+
+def _get_menu_item(text, callback, data, sensitive=True):
+    item = Gtk.MenuItem.new_with_label(text)
+    item.connect("activate", callback, data)
+    item.show()
+    item.set_sensitive(sensitive)
+    return item
+
+def _add_separetor(menu):
+    sep = Gtk.SeparatorMenuItem()
+    sep.show()
+    menu.add(sep)
+    
 def _hamburger_menu_callback(widget, msg):
     if msg == "load":
-        open_clip_dialog()
+        _load_script_dialog(_load_animation_dialog_callback)
+    elif msg == "save":     
+        _save_animation_dialog(_save_animation_dialog_callback)
     elif msg == "close":
         _shutdown()
-    elif msg == "docs":
-        webbrowser.open(url="http://gmic.eu/", new=0, autoraise=True)
+    elif msg == "web":
+        webbrowser.open(url="https://natron.fr/", new=0, autoraise=True)
 
+
+
+def _save_animation_dialog(callback):
+    dialog = Gtk.FileChooserDialog(_("Save Natron Animation Values As"), None, 
+                                   Gtk.FileChooserAction.SAVE, 
+                                   (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
+                                   _("Save").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.SAVE)
+    dialog.set_current_name("animation")
+    dialog.set_do_overwrite_confirmation(True)
+    dialog.set_select_multiple(False)
+    dialog.connect('response', callback)
+    dialog.show()
+
+def _save_animation_dialog_callback(dialog, response_id):
+    if response_id == Gtk.ResponseType.ACCEPT:
+        file_path = dialog.get_filenames()[0]
+        # Write out file.
+        with atomicfile.AtomicFileWriter(file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(_animation_instance, write_file)
+        dialog.destroy()
+    else:
+        dialog.destroy()
+
+def _load_script_dialog(callback):
+    dialog = Gtk.FileChooserDialog(_("Load Animation Data"), None, 
+                                   Gtk.FileChooserAction.OPEN, 
+                                   (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
+                                    _("OK").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.OPEN)
+    dialog.set_select_multiple(False)
+    dialog.connect('response', callback)
+    dialog.show()
+    
+def _load_animation_dialog_callback(dialog, response_id):
+    if response_id == Gtk.ResponseType.ACCEPT:
+        filename = dialog.get_filenames()[0]
+        # Load project object
+        f = open(filename)
+        load_instance = pickle.load(f)
+        global _animation_instance
+        _animation_instance = load_instance
+        _window.change_animation()
+        dialog.destroy()
+    else:
+        dialog.destroy()
 
 
 # ------------------------------------------------ rendering
 def render_output():
     # Write data used to modyfy rendered notron animation
-    _animation_instance.write_out_modify_data(_window.editable_properties)
+    _animation_instance.write_out_modify_data(_window.editable_properties, _session_id, _window.format_selector.get_active())
     _window.render_percentage.set_markup("<small>" + _("Render starting...") + "</small>")
 
     launch_thread = NatronRenderLaunchThread()
@@ -682,12 +762,11 @@ def render_preview_frame():
     global _progress_updater
     _progress_updater = None
 
-    _animation_instance.write_out_modify_data(_window.editable_properties)
+    _animation_instance.write_out_modify_data(_window.editable_properties, _session_id, _window.format_selector.get_active())
     
     launch_thread = NatronRenderLaunchThread(True)
     launch_thread.start()
     
-
 
 #------------------------------------------------- render threads
 class NatronRenderLaunchThread(threading.Thread):
@@ -707,7 +786,8 @@ class NatronRenderLaunchThread(threading.Thread):
             render_frame = _window.get_render_frame()
         else:
             range_str = str(_animation_instance.frame())
-            render_frame = utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/preview####.png"
+            render_frame = utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/session_" + _session_id + "/preview####.png"
+            print render_frame
             Gdk.threads_enter()
             _window.preview_info.set_markup("<small>" + _("Rendering preview for frame ") + range_str + "..." + "</small>") 
             Gdk.threads_leave()
@@ -732,6 +812,7 @@ class NatronRenderLaunchThread(threading.Thread):
 
         # Render complete GUI updates
         Gdk.threads_enter()
+        
         if self.is_preview == False:
             _window.render_percentage.set_markup("<small>" + _("Render complete.") + "</small>")
         else:
@@ -741,9 +822,10 @@ class NatronRenderLaunchThread(threading.Thread):
                 _(", render time: ") + time_str +  "</small>" )
 
             global _current_preview_surface
-            preview_frame_path = utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/preview" + str(_animation_instance.frame()).zfill(4) +  ".png"
+            preview_frame_path = utils.get_hidden_user_dir_path() + appconsts.NATRON_DIR + "/session_" + _session_id + "/preview" + str(_animation_instance.frame()).zfill(4) +  ".png"
             _current_preview_surface = cairo.ImageSurface.create_from_png(preview_frame_path)
             _window.preview_monitor.queue_draw()
+            
         Gdk.threads_leave()
         
         print "Natron render done."
