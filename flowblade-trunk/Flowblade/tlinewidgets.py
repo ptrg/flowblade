@@ -103,7 +103,7 @@ MUTE_ICON_POS = (5, 4)
 MUTE_ICON_POS_NORMAL = (5, 14)
 LOCK_POS = (90, 5)
 INSRT_ICON_POS = (108, 18)
-INSRT_ICON_POS_SMALL = (81, 6)
+INSRT_ICON_POS_SMALL = (108, 6)
 
 # tracks column icons
 FULL_LOCK_ICON = None
@@ -178,8 +178,6 @@ def get_multiplied_color_from_grad(grad_color, m):
 GRAD_MULTIPLIER = 1.3
 SELECTED_MULTIPLIER = 1.52
 
-#CLIP_COLOR = (0.62, 0.38, 0.7) 0.18, 0.11 0.21
-#CLIP_COLOR_L = get_multiplied_color(CLIP_COLOR, GRAD_MULTIPLIER)
 CLIP_TEXT_COLOR = (0, 0, 0)
 CLIP_TEXT_COLOR_OVERLAY = (0.78, 0.78, 0.78, 0.6)
 
@@ -192,9 +190,9 @@ AUDIO_CLIP_COLOR_GRAD = (1, 0.09, 0.21, 0.09, 1)#(1, 0.23, 0.52, 0.23, 1)#(1, 0.
 AUDIO_CLIP_COLOR_GRAD_L = get_multiplied_grad(0, 1, AUDIO_CLIP_COLOR_GRAD, GRAD_MULTIPLIER)
 AUDIO_CLIP_SELECTED_COLOR = (0.53, 0.85, 0.53)
 
-IMAGE_CLIP_SELECTED_COLOR = (0.45, 0.90, 0.93)
 IMAGE_CLIP_COLOR_GRAD = (1, 0.1, 0.20, 0.21, 1) #(1, 0.33, 0.65, 0.69, 1)
 IMAGE_CLIP_COLOR_GRAD_L = get_multiplied_grad(0, 1, IMAGE_CLIP_COLOR_GRAD, GRAD_MULTIPLIER) 
+IMAGE_CLIP_SELECTED_COLOR = get_multiplied_color_from_grad(IMAGE_CLIP_COLOR_GRAD, SELECTED_MULTIPLIER + 0.1)
 
 COMPOSITOR_CLIP = (0.12, 0.12, 0.22, 0.7)
 COMPOSITOR_CLIP_AUTO_FOLLOW = (0.33, 0.05, 0.52, 0.65)
@@ -1494,7 +1492,7 @@ class TimeLineCanvas:
 
         clip_index = current_sequence().get_clip_index(track, frame)
         if clip_index == -1:
-            # This gets none always afetr rack, which may not be what we want
+            # This gets none always after track, which may not be what we want
             return appconsts.POINTER_CONTEXT_NONE
 
         clip_start_frame = track.clip_start(clip_index)
@@ -1580,7 +1578,7 @@ class TimeLineCanvas:
 
         # Draw edit mode overlay
         if self.edit_mode_overlay_draw_func != None:
-            self.edit_mode_overlay_draw_func(cr,self.edit_mode_data)
+            self.edit_mode_overlay_draw_func(cr, self.edit_mode_data)
         
         audiowaveformrenderer.launch_queued_renders()
 
@@ -2427,10 +2425,12 @@ class TimeLineFrameScale:
         self.set_default_callback = set_default_callback
 
         if editorpersistance.prefs.theme != appconsts.LIGHT_THEME:
-            global FRAME_SCALE_SELECTED_COLOR_GRAD, FRAME_SCALE_SELECTED_COLOR_GRAD_L 
+            global FRAME_SCALE_SELECTED_COLOR_GRAD, FRAME_SCALE_SELECTED_COLOR_GRAD_L, MARK_COLOR 
             FRAME_SCALE_SELECTED_COLOR_GRAD = DARK_FRAME_SCALE_SELECTED_COLOR_GRAD
             FRAME_SCALE_SELECTED_COLOR_GRAD_L = DARK_FRAME_SCALE_SELECTED_COLOR_GRAD_L
-
+            if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
+                MARK_COLOR = (0.9, 0.9, 0.9) # This needs to be light for contrast
+                
     def _press_event(self, event):
         if event.button == 1 or event.button == 3:
             if not timeline_visible():

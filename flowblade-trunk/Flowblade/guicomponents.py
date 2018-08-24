@@ -216,6 +216,7 @@ class BinTreeView(Gtk.VBox):
         # Cell renderers
         self.icon_rend = Gtk.CellRendererPixbuf()
         self.text_rend_1 = Gtk.CellRendererText()
+        self.text_rend_1.set_property("editable", True)
         self.text_rend_1.connect("edited",
                                  bin_name_edit_cb,
                                  (self.storemodel, 1))
@@ -695,7 +696,6 @@ class ClipInfoPanel(Gtk.HBox):
 
         self.name_value = Gtk.Label()
         self.name_value.set_ellipsize(Pango.EllipsizeMode.END)
-        self.name_value.set_max_width_chars(15)
 
         self.name_label.set_sensitive(False)
         self.name_value.set_sensitive(False)
@@ -2227,16 +2227,14 @@ class MonitorTCDisplay:
         """
         x, y, w, h = allocation
 
-        # Draw bg
-        #cr.set_source_rgb(*guiutils.get_theme_bg_color())
-        #cr.rectangle(0, 0, w, h)
-        #cr.fill()
-
         # Draw round rect with gradient and stroke around for thin bezel
         self._round_rect_path(cr)
-        cr.set_source_rgb(0.2, 0.2, 0.2)
+        if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
+            cr.set_source_rgb(0.2, 0.2, 0.2)
+        else:
+            cr.set_source_rgb(0.1, 0.1, 0.1)
         cr.fill_preserve()
-
+        
         if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
             grad = cairo.LinearGradient (0, 0, 0, h)
             for stop in BIG_TC_GRAD_STOPS:
@@ -2554,6 +2552,10 @@ def get_clip_effects_editor_hamburger_menu(event, callback):
     
     menu.add(_get_menu_item(_("Delete Effect"), callback, "delete"))
 
+    _add_separetor(menu)
+    
+    menu.add(_get_menu_item(_("Close Editor"), callback, "close"))
+
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
 
@@ -2570,6 +2572,10 @@ def get_compositor_editor_hamburger_menu(event, callback):
     
     menu.add(_get_menu_item(_("Delete Compositor"), callback, "delete"))
 
+    _add_separetor(menu)
+    
+    menu.add(_get_menu_item(_("Close Editor"), callback, "close"))
+    
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
     
@@ -2863,6 +2869,7 @@ class MonitorSwitch:
         self.widget = cairoarea.CairoDrawableArea2( self.WIDTH ,
                                                     self.HEIGHT,
                                                     self._draw)
+        self.widget.set_tooltip_text(_("Display Timeline / Clip on Monitor"))
         self.widget.press_func = self._press_event
 
         self.tline_surface = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "timeline_button.png")
@@ -2885,7 +2892,7 @@ class MonitorSwitch:
         cr.set_source_surface(tline_draw_surface, 10, 5)
         cr.paint()
 
-        cr.set_source_surface(clip_draw_surface, 60, 7)
+        cr.set_source_surface(clip_draw_surface, 54, 6)
         cr.paint()
         
     def _press_event(self, event):

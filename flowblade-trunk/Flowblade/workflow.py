@@ -43,14 +43,15 @@ import updater
 
 # Timeline tools data
 _TOOLS_DATA = None
+_TOOL_TIPS = None
 
 _tools_menu = Gtk.Menu()
 _workflow_menu = Gtk.Menu()
 
 def init_data():
-    global _TOOLS_DATA
+    global _TOOLS_DATA, _TOOL_TIPS
     _TOOLS_DATA = { appconsts.TLINE_TOOL_INSERT:        (_("Insert"), "insertmove_cursor.png"),
-                    appconsts.TLINE_TOOL_OVERWRITE:     (_("Overwrite"), "overwrite_cursor.png"),
+                    appconsts.TLINE_TOOL_OVERWRITE:     (_("Move"), "overwrite_cursor.png"),
                     appconsts.TLINE_TOOL_TRIM:          (_("Trim"), "oneroll_cursor.png"),
                     appconsts.TLINE_TOOL_ROLL:          (_("Roll"), "tworoll_cursor.png"),
                     appconsts.TLINE_TOOL_SLIP:          (_("Slip"), "slide_cursor.png"),
@@ -60,7 +61,18 @@ def init_data():
                     appconsts.TLINE_TOOL_CUT:           (_("Cut"), "cut_cursor.png"),
                     appconsts.TLINE_TOOL_KFTOOL:        (_("Keyframe"), "kftool_cursor.png")
                   }
-
+                  
+    _TOOL_TIPS =  { appconsts.TLINE_TOOL_INSERT:        _("<b>Left Mouse</b> to move and insert single clip between clips.\n<b>CTRL + Left Mouse</b> to select and move clip range.\n<b>Left Mouse</b> on clip ends to trim clip length."),
+                    appconsts.TLINE_TOOL_OVERWRITE:     _("<b>Left Mouse</b> to move clip into new position.\n<b>CTRL + Left Mouse</b> to select and move clip range into new position.\n<b>Left Mouse</b> on clip ends to trim clip length."),
+                    appconsts.TLINE_TOOL_TRIM:          _("<b>Left Mouse</b> to trim closest clip end.\n<b>Left or Right Arrow Key</b> + <b>Enter Key</b> to do the edit using keyboard."), 
+                    appconsts.TLINE_TOOL_ROLL:          _("<b>Left Mouse</b> to move closest edit point between 2 clips.\n<b>Left or Right Arrow Key</b> + <b>Enter Key</b> to do the edit using keyboard."), 
+                    appconsts.TLINE_TOOL_SLIP:          _("<b>Left Mouse</b> to move clip contents within clip.\n<b>Left or Right Arrow Key</b> + <b>Enter Key</b> to do the edit using keyboard."), 
+                    appconsts.TLINE_TOOL_SPACER:        _("<b>Left Mouse</b> to move clip under cursor and all clips after it forward or backward, overwrites not allowed.\n<b>CTRL + Left Mouse</b> to move clip under cursor and all clips after it <b>on the same track</b> forward or backward, overwrites not allowed."), 
+                    appconsts.TLINE_TOOL_BOX:           _("<b>1. Left Mouse</b> to draw a box to select a group of clips.\n<b>2. Left Mouse</b> inside the box to move selected clips forward or backward."), 
+                    appconsts.TLINE_TOOL_RIPPLE_TRIM:   _("<b>Left Mouse</b> to trim closest clip end and move all clips after it to maintain sync, overwrites not allowed.\n<b>Left or Right Arrow Key</b> + <b>Enter Key</b> to do the edit using keyboard."), 
+                    appconsts.TLINE_TOOL_CUT:           _("<b>Left Mouse</b> to cut clip under cursor.\n<b>CTRL + Left Mouse</b> to cut clips on all tracks at cursor position."), 
+                    appconsts.TLINE_TOOL_KFTOOL:        _("Keyframe")
+                  }
 #----------------------------------------------------- workflow presets
 def _set_workflow_STANDARD():
     editorpersistance.prefs.active_tools = [2, 6, 8, 4, 5, 7]
@@ -106,16 +118,16 @@ def _tools_menu_hidden(tools_menu, menu_items):
     for menu_item in menu_items:
         menu_item.set_accel_path(None)
 
-def _get_image_menu_item(tool_icon_file, text, callback, data):
+def _get_image_menu_item(tool_icon_file, text, callback, tool_id):
     item = Gtk.ImageMenuItem()
     tool_img = Gtk.Image.new_from_file(respaths.IMAGE_PATH + tool_icon_file)
         
     item.set_image(tool_img)
-    item.connect("activate", callback, data)
+    item.connect("activate", callback, tool_id)
     item.set_always_show_image(True)
     item.set_use_stock(False)
     item.set_label(text)
-    #item.set_tooltip_markup("<b>ladsladsladsladsl</b>adsladsldal")
+    item.set_tooltip_markup(_TOOL_TIPS[tool_id])#"<b>ladsladsladsladsl</b>   adsladsldal")
     item.show()
     return item
     
@@ -192,7 +204,7 @@ def workflow_menu_launched(widget, event):
         tool_id = editorpersistance.prefs.active_tools[i]
         tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
         _workflow_menu.add(_get_workflow_tool_menu_item(_workflow_menu_callback, tool_id, tool_name, tool_icon_file, i+1))
-        try: # needed when manually changing preset tools, remove when those are decided upon
+        try: # needed to prevent crashes when manually changing preset tools during dev, remove when those are decided upon
             non_active_tools.remove(tool_id)
         except:
             pass

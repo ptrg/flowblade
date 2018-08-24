@@ -115,6 +115,8 @@ def _toggle_image_switch(widget, icons):
         widget.set_image(not_pressed)
 
 def top_level_project_panel():
+    if editorpersistance.prefs.top_row_layout == appconsts.ALWAYS_TWO_PANELS:
+        return False
     if editorpersistance.prefs.top_level_project_panel == True and editorstate.screen_size_small_width() == False and editorstate.screen_size_large_height() == True:
         return True
     
@@ -230,6 +232,13 @@ class EditorWindow:
             ('AddMediaClip', None, _('Add Media Clip...'), None, None, lambda a: projectaction.add_media_files()),
             ('AddImageSequence', None, _('Add Image Sequence...'), None, None, lambda a:projectaction.add_image_sequence()),
             ('CreateColorClip', None, _('Create Color Clip...'), None, None, lambda a:patternproducer.create_color_clip()),
+            ('BinMenu', None, _('Bin')),
+            ('AddBin', None, _('Add Bin'), None, None, lambda a:projectaction.add_new_bin()),
+            ('DeleteBin', None, _('Delete Selected Bin'), None, None, lambda a:projectaction.delete_selected_bin()),
+            ('SequenceMenu', None, _('Sequence')),
+            ('AddSequence', None, _('Add New Sequence'), None, None, lambda a:projectaction.add_new_sequence()),
+            ('EditSequence', None, _('Edit Selected Sequence'), None, None, lambda a:projectaction.change_edit_sequence()),
+            ('DeleteSequence', None, _('Delete Selected Sequence'), None, None, lambda a:projectaction.delete_selected_sequence()),
             ('PatternProducersMenu', None, _('Create Pattern Producer')),
             ('CreateNoiseClip', None, _('Noise'), None, None, lambda a:patternproducer.create_noise_clip()),
             ('CreateBarsClip', None, _('EBU Bars'), None, None, lambda a:patternproducer.create_bars_clip()),
@@ -340,6 +349,16 @@ class EditorWindow:
                 <menu action='ProjectMenu'>
                     <menuitem action='AddMediaClip'/>
                     <menuitem action='AddImageSequence'/>
+                    <separator/>
+                    <menu action='BinMenu'>
+                        <menuitem action='AddBin'/>
+                        <menuitem action='DeleteBin'/>
+                    </menu>
+                    <menu action='SequenceMenu'>
+                        <menuitem action='AddSequence'/>
+                        <menuitem action='EditSequence'/>
+                        <menuitem action='DeleteSequence'/>
+                    </menu>
                     <separator/>
                     <menuitem action='CreateColorClip'/>
                     <menu action='PatternProducersMenu'>
@@ -464,7 +483,6 @@ class EditorWindow:
             self.mm_paned = Gtk.HPaned()
             self.mm_paned.pack1(self.bins_panel, resize=True, shrink=True)
             self.mm_paned.pack2(media_panel, resize=True, shrink=False)
-        #self.mm_paned.set_position(10)
 
         mm_panel = guiutils.set_margins(self.mm_paned, 0, 0, 0, 0)
         
@@ -550,7 +568,7 @@ class EditorWindow:
         media_log_panel = guiutils.set_margins(media_log_vbox, 6, 6, 6, 6)
         self.media_log_events_list_view = media_log_events_list_view
 
-        # Project Panel / Pop Level Project pane
+        # Project Panel
         # Sequence list
         self.sequence_list_view = guicomponents.SequenceListView(   projectaction.sequence_name_edited,
                                                                     projectaction.sequence_panel_popup_requested)
@@ -613,7 +631,8 @@ class EditorWindow:
         self._create_monitor_row_widgets()
         
         self.player_buttons = glassbuttons.PlayerButtons()
-        self.player_buttons.widget.set_tooltip_text(_("Prev Frame - Arrow Left\nNext Frame - Arrow Right\nPlay - Space\nStop - Space\nMark In - I\nMark Out - O\nClear Marks\nTo Mark In\nTo Mark Out"))
+        tooltips = [_("Prev Frame - Arrow Left"), _("Next Frame - Arrow Right"), _("Play - Space"), _("Stop - Space"), _("Mark In - I"), _("Mark Out - O"), _("Clear Marks"), _("To Mark In"), _("To Mark Out")]
+        tooltip_runner = glassbuttons.TooltipRunner(self.player_buttons, tooltips)
         if editorpersistance.prefs.buttons_style == 2: # NO_DECORATIONS
             self.player_buttons.no_decorations = True
 
