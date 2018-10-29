@@ -1441,6 +1441,7 @@ def _get_dynamic_kb_shortcuts_panel(xml_file):
     tline_vbox.pack_start(_get_kb_row(_("Alt + I"), _("Go To Mark In")), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("Alt + O"), _("Go To Mark Out")), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "cut"), False, False, 0)
+    tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "cut_all"), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("DELETE"),  _("Splice Out")), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "insert"), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "append"), False, False, 0)
@@ -1484,7 +1485,7 @@ def _get_dynamic_kb_shortcuts_panel(xml_file):
     tools_vbox.pack_start(_get_dynamic_kb_row(root_node, "edit_mode_spacer"), False, False, 0)
     tools_vbox.pack_start(_get_dynamic_kb_row(root_node, "edit_mode_box"), False, False, 0)
     tools_vbox.pack_start(_get_kb_row(_("Keypad 1-7"), _("Same as 1-7")), False, False, 0)
-    tools_vbox.pack_start(_get_kb_row(_("R"), _("Trim Tool Ripple Mode On/Off")), False, False, 0)
+    tools_vbox.pack_start(_get_kb_row(_("R"), _("Toggle Trim / Ripple Trim Tools")), False, False, 0)
     tools = guiutils.get_named_frame(_("Tools"), tools_vbox)
 
     geom_vbox = Gtk.VBox()
@@ -1493,7 +1494,11 @@ def _get_dynamic_kb_shortcuts_panel(xml_file):
     geom_vbox.pack_start(_get_kb_row(_("Up Arrow"), _("Move Source Video Up 1px")), False, False, 0)
     geom_vbox.pack_start(_get_kb_row(_("Down Arrow"), _("Move Source Video Down 1px")), False, False, 0)
     geom_vbox.pack_start(_get_kb_row(_("Control + Arrow"), _("Move Source Video 10px")), False, False, 0)
-    geom_vbox.pack_start(_get_kb_row(_("Control + Mouse Drag"), _("Keep Aspect Ratio in Affine Blend scaling")), False, False, 0) 
+    geom_vbox.pack_start(_get_kb_row(_("Control + Mouse Drag"), _("Keep Aspect Ratio in Affine Blend scaling")), False, False, 0)
+    geom_vbox.pack_start(_get_kb_row(_("Shift + Left Arrow "), _("Scale Down")), False, False, 0)
+    geom_vbox.pack_start(_get_kb_row(_("Shift + Right Arrow"), _("Scale Up")), False, False, 0)
+    geom_vbox.pack_start(_get_kb_row(_("Shift + Control + Left Arrow "), _("Scale Down More")), False, False, 0)
+    geom_vbox.pack_start(_get_kb_row(_("Shift + Control + Right Arrow"), _("Scale Up More")), False, False, 0)
     geom_vbox.pack_start(_get_kb_row(_("Shift"), _("Snap to X or Y of drag start point")), False, False, 0)
     geom = guiutils.get_named_frame(_("Geometry Editor"), geom_vbox)
 
@@ -1881,4 +1886,11 @@ def tline_audio_sync_dialog(callback, data):
     dialog.connect('response', callback, data)
     dialog.show_all()
 
+def no_audio_dialog(track):
+    dialogutils.warning_message(_("Can't put an audio clip on a video track."), 
+                            _("Track ")+ utils.get_track_name(track, editorstate.current_sequence()) + _(" is a video track and can't display audio only material."),
+                            gui.editor_window.window)
 
+
+        
+        

@@ -842,12 +842,65 @@ class CompositorInfoPanel(Gtk.HBox):
         self.source_track_value.set_use_markup(True)
 
     def set_enabled(self, value):
-        pass
-        #self.source_track.set_sensitive(value)
-        #self.destination_track.set_sensitive(value)
-        #self.length.set_sensitive(value)
+        pass # Seek and destroy callsites
 
 
+# -------------------------------------------- compositor info
+class BinInfoPanel(Gtk.HBox):
+    def __init__(self):
+        GObject.GObject.__init__(self)
+        self.set_homogeneous(False)
+
+        if editorstate.screen_size_small_height() == True:
+            font_desc = "sans bold 8"
+        else:
+            font_desc = "sans bold 9"
+            
+        self.bin_name = Gtk.Label()
+
+        self.bin_name.modify_font(Pango.FontDescription(font_desc))
+        self.bin_name.set_sensitive(False)
+                       
+        self.items = Gtk.Label()
+        self.items_value = Gtk.Label()
+
+        self.items.modify_font(Pango.FontDescription(font_desc))
+        self.items_value.modify_font(Pango.FontDescription(font_desc))
+        self.items.set_sensitive(False)
+        self.items_value.set_sensitive(False)
+        
+        info_col_2 = Gtk.HBox()
+        info_col_2.pack_start(self.bin_name, False, True, 0)
+        info_col_2.pack_start(Gtk.Label(), True, True, 0)
+
+        info_col_3 = Gtk.HBox()
+        info_col_3.pack_start(self.items, False, False, 0)
+        info_col_3.pack_start(self.items_value, False, False, 0)
+        info_col_3.pack_start(Gtk.Label(), True, True, 0)
+
+        PAD_HEIGHT = 2
+        self.pack_start(guiutils.pad_label(24, 4), False, False, 0)
+        self.pack_start(info_col_2, False, False, 0)
+        self.pack_start(guiutils.pad_label(12, 4), False, False, 0)
+        self.pack_start(info_col_3, False, False, 0)
+        self.pack_start(Gtk.Label(), True, True, 0)
+
+        self.set_spacing(4)
+
+    def display_bin_info(self):        
+        self.bin_name.set_text("<b>" + editorstate.PROJECT().c_bin.name + "</b>")
+        self.items.set_text(_("<b>Items:</b>") + " ")
+        self.items_value.set_text(str(len(editorstate.PROJECT().c_bin.file_ids)))
+        
+        self._set_use_mark_up()
+
+    def _set_use_mark_up(self):
+        self.bin_name.set_use_markup(True)
+        self.items.set_use_markup(True)
+        self.items_value.set_use_markup(True)
+
+
+        
 # -------------------------------------------- media select panel
 class MediaPanel():
 
@@ -862,7 +915,8 @@ class MediaPanel():
         self.monitor_indicator = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "monitor_indicator.png")
         self.last_event_time = 0.0
         self.last_ctrl_selected_media_object = None
-        
+        self.double_click_release = False # needed to get focus over to pos bar after double click, issa complicated.
+            
         global has_proxy_icon, is_proxy_icon, graphics_icon, imgseq_icon, audio_icon, pattern_icon, profile_warning_icon
         has_proxy_icon = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "has_proxy_indicator.png")
         is_proxy_icon = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "is_proxy_indicator.png")
@@ -877,11 +931,12 @@ class MediaPanel():
 
     def media_object_selected(self, media_object, widget, event):
         if event.type == Gdk.EventType._2BUTTON_PRESS:
-            widget.grab_focus()
+            self.double_click_release = True
             self.clear_selection()
             media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
             self.selected_objects.append(media_object)
             self.widget.queue_draw()
+            gui.pos_bar.widget.grab_focus()
             GLib.idle_add(self.double_click_cb, media_object.media_file)
             return
 
@@ -893,6 +948,7 @@ class MediaPanel():
         self.last_event_time = now
 
         widget.grab_focus()
+
         if event.button == 1:
             if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
                 
@@ -903,7 +959,47 @@ class MediaPanel():
                     self.selected_objects.append(media_object)
                     media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
                     self.last_ctrl_selected_media_object = media_object
-                    return                
+                    return
+            elif (event.get_state() & Gdk.ModifierType.SHIFT_MASK) and len(self.selected_objects) > 0:
+                # Get data on current selection and pressed media object
+                first_selected = -1
+                last_selected = -1
+                pressed_widget = -1
+                for i in range(0, len(current_bin().file_ids)):
+                    file_id = current_bin().file_ids[i]
+                    m_file = PROJECT().media_files[file_id]
+                    m_obj = self.widget_for_mediafile[m_file]
+                    if m_obj in self.selected_objects:
+                        selected = True
+                    else:
+                        selected = False
+                    
+                    if selected and first_selected == -1:
+                        first_selected = i
+                    if selected:
+                        last_selected = i
+                    if media_object == m_obj:
+                        pressed_widget = i
+                
+                # Get new selection range
+                if pressed_widget < first_selected:
+                    sel_range = (pressed_widget, first_selected)
+                elif pressed_widget > last_selected:
+                    sel_range = (last_selected, pressed_widget)
+                else:
+                    sel_range = (pressed_widget, pressed_widget)
+                    
+                self.clear_selection()
+                
+                # Select new range
+                start, end = sel_range
+                for i in range(start, end + 1):
+                    file_id = current_bin().file_ids[i]
+                    m_file = PROJECT().media_files[file_id]
+                    m_obj = self.widget_for_mediafile[m_file]
+                    
+                    self.selected_objects.append(m_obj)
+                    m_obj.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
             else:
                 self.clear_selection()
                 media_object.widget.override_background_color(Gtk.StateType.NORMAL, gui.get_selected_bg_color())
@@ -921,8 +1017,12 @@ class MediaPanel():
         if self.last_ctrl_selected_media_object == media_object:
             self.last_ctrl_selected_media_object = None
             return
+        
+        if not self.double_click_release:
+            widget.grab_focus()
+        else:
+            self.double_click_release = False # after double click we want bos bar to have focus
             
-        widget.grab_focus()
         if event.button == 1:
             if (event.get_state() & Gdk.ModifierType.CONTROL_MASK):
                 # remove from selected if already there
@@ -1708,6 +1808,16 @@ def _get_edit_menu_item(event, clip, track, callback):
     sub_menu = Gtk.Menu()
     menu_item.set_submenu(sub_menu)
 
+    if (clip.media_type == appconsts.IMAGE_SEQUENCE or clip.media_type == appconsts.IMAGE or clip.media_type == appconsts.PATTERN_PRODUCER) == False:
+        vol_item = _get_menu_item(_("Volume Keyframes"), callback, (clip, track, "volumekf", event.x))
+        sub_menu.append(vol_item)
+
+    if track.type == appconsts.VIDEO:
+        bright_item = _get_menu_item(_("Brightness Keyframes"), callback, (clip, track, "brightnesskf", event.x))
+        sub_menu.append(bright_item)
+
+    _add_separetor(sub_menu)
+    
     del_item = _get_menu_item(_("Delete"), callback, (clip, track, "delete", event.x))
     sub_menu.append(del_item)
 
@@ -2001,7 +2111,9 @@ def get_profile_info_text(profile):
         str_list.append(_("Interlaced"))
 
     str_list.append("\n")
-    str_list.append(_("Fps: ") + str(profile.fps()))
+    
+    fps_str = utils.get_fps_str_with_two_decimals(str(profile.fps()))
+    str_list.append(_("Fps: ") + fps_str)
     pix_asp = float(profile.sample_aspect_num()) / profile.sample_aspect_den()
     pa_str =  "%.2f" % pix_asp
     str_list.append(", " + _("Pixel Aspect: ") + pa_str)
@@ -2809,9 +2921,10 @@ class ToolSelector(ImageMenuLaunch):
                                             appconsts.TLINE_TOOL_BOX: 7,
                                             appconsts.TLINE_TOOL_RIPPLE_TRIM: 3,
                                             appconsts.TLINE_TOOL_CUT: 8,
-                                            appconsts.TLINE_TOOL_KFTOOL: 9
+                                            appconsts.TLINE_TOOL_KFTOOL: 9,
+                                            appconsts.TLINE_TOOL_MULTI_TRIM: 10
                                      }
-   
+
     def set_tool_pixbuf(self, tool_id):
         surface_index = self.TOOL_ID_TO_SURFACE_INDEX[tool_id]
         self.set_pixbuf(surface_index)

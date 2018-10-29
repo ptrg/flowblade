@@ -22,6 +22,9 @@
 Handles Box tool functionality.
 """
 
+import appconsts
+import dialogutils
+import gui
 import edit
 import editorstate
 from editorstate import current_sequence
@@ -30,6 +33,7 @@ import updater
 
 box_selection_data = None
 edit_data = None
+entered_from_overwrite = False
 
 def clear_data():
     # These need to cleared when box tool is activated
@@ -39,6 +43,7 @@ def clear_data():
      
 def mouse_press(event, frame):
     global edit_data, box_selection_data
+
     if box_selection_data == None: # mouse action is to select
         press_point = (event.x, event.y)
         
@@ -75,12 +80,27 @@ def mouse_move(x, y, frame):
     updater.repaint_tline()
     
 def mouse_release(x, y, frame):
-    global box_selection_data, edit_data
+    global box_selection_data, edit_data, entered_from_overwrite
     if edit_data == None:
+        if entered_from_overwrite == True:
+            _exit_to_overwrite()
         return
         
     if box_selection_data == None: # mouse action is to select
         box_selection_data = BoxMoveData(edit_data["press_point"], (x, y))
+        
+        locked_track = box_selection_data.get_possible_locked_track()
+        if locked_track != None:
+            dialogutils.track_lock_check_and_user_info(locked_track)
+            edit_data = None
+            box_selection_data = None
+            tlinewidgets.set_edit_mode_data(edit_data)
+            updater.repaint_tline()
+            # Exit box mode if entered from overwrite
+            if entered_from_overwrite == True:
+                _exit_to_overwrite()
+            return 
+              
         if box_selection_data.is_empty() == False:
             edit_data = {"action_on":True,
                          "press_frame":frame,
@@ -92,7 +112,26 @@ def mouse_release(x, y, frame):
                          "press_frame":-1,
                          "delta":0,
                          "box_selection_data":box_selection_data}
+            # Exit box mode if entered from overwrite  with empty selection
+            if entered_from_overwrite == True:
+                _exit_to_overwrite()
+                return 
+    
     else: # mouse action is to move
+        # Exit if selection contains locked track
+        locked_track = box_selection_data.get_possible_locked_track()
+        if locked_track != None:
+            dialogutils.track_lock_check_and_user_info(locked_track)
+            edit_data = None
+            box_selection_data = None
+            tlinewidgets.set_edit_mode_data(edit_data)
+            updater.repaint_tline()
+            # Exit box mode if entered from overwrite
+            if entered_from_overwrite == True:
+                _exit_to_overwrite()
+            return 
+            
+        # If we lock track after 
         delta = frame - edit_data["press_frame"]
         edit_data["delta"] = delta
 
@@ -105,8 +144,23 @@ def mouse_release(x, y, frame):
         # Back to start state
         edit_data = None
         box_selection_data = None
+        
+        # Exit box mode if entered from overwrite with empty selection
+        if entered_from_overwrite == True:
+            _exit_to_overwrite()
+            return 
     
     tlinewidgets.set_edit_mode_data(edit_data)
+    updater.repaint_tline()
+
+def _exit_to_overwrite():
+    # If we entered box mode from overwite mode empty click, this is used to enter back into overwrite mode.
+    global entered_from_overwrite
+    entered_from_overwrite = False
+    editorstate.overwrite_mode_box = False
+    tlinewidgets.set_edit_mode_data(None)
+    gui.editor_window.set_cursor_to_mode() # This gets set wrong in editevent.tline_canvas_mouse_released() and were putting it back here, 
+                                           # this could be investigated for better solution, this could cause a cursor flash, but on dev system we're not getting it.
     updater.repaint_tline()
 
 
@@ -210,6 +264,13 @@ class BoxMoveData:
                 
         return False
 
+
+    def get_possible_locked_track(self):
+        for selection in self.track_selections:
+            if current_sequence().tracks[selection.track_id].edit_freedom == appconsts.LOCKED:
+                return current_sequence().tracks[selection.track_id]
+        
+        return None
 
 class BoxTrackSelection:
     """

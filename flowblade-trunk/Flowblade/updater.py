@@ -36,6 +36,7 @@ from editorstate import PLAYER
 from editorstate import PROJECT
 from editorstate import timeline_visible
 import editorpersistance
+import kftoolmode
 import monitorevent
 import utils
 import respaths
@@ -286,9 +287,11 @@ def mouse_scroll_zoom(event):
         if not(event.get_state() & Gdk.ModifierType.CONTROL_MASK):
             do_zoom = False
 
-    if do_zoom == True:
+    if do_zoom == True: # Uh, were doing scroll here.
         adj = gui.tline_scroll.get_adjustment()
         incr = adj.get_step_increment()
+        if editorpersistance.prefs.scroll_horizontal_dir_up_forward == False:
+            incr = -incr
         if event.direction == Gdk.ScrollDirection.UP:
             adj.set_value(adj.get_value() + incr)
         else:
@@ -415,7 +418,7 @@ def display_clip_in_monitor(clip_monitor_currently_active=False):
     gui.pos_bar.widget.grab_focus()
     gui.media_list_view.widget.queue_draw()
     
-    # feature removed curently
+    # feature removed currently
     #if editorpersistance.prefs.auto_play_in_clip_monitor == True:
     #    PLAYER().start_playback()
     
@@ -470,16 +473,6 @@ def update_seqence_info_text():
         prog_len = 0
     tc_info = utils.get_tc_string(prog_len)
 
-    """
-    profile_desc = editorstate.current_sequence().profile.description()
-
-
-        
-    if editorpersistance.prefs.show_sequence_profile:
-        gui.editor_window.monitor_source.set_text(name + "  -  " + profile_desc + "  -  " + tc_info)
-    else:
-        gui.editor_window.monitor_source.set_text(name + "  -  " + tc_info)
-    """
     gui.editor_window.monitor_source.set_text(name + "  -  " + tc_info)
     range_info = _get_marks_range_info_text(PLAYER().producer.mark_in, PLAYER().producer.mark_out)
     gui.editor_window.info1.set_text(range_info)
@@ -541,14 +534,6 @@ def set_and_display_monitor_media_file(media_file):
     selected for display by double clicking or drag'n'drop
     """
     editorstate._monitor_media_file = media_file
-    #display_clip_in_monitor(clip_monitor_currently_active = True)
-    
-    # !!???!! I'm not understandung this after new monitor switch, see if we have problems here
-    # If we're already displaying clip monitor, then already button is down we call display_clip_in_monitor(..)
-    # directly, but dont save position because we're not displaying now.
-    #
-    # If we're displaying sequence we do programmatical click on "Clip" button 
-    # to display clip via it's signal listener.
     
     if editorstate.timeline_visible() == True: # This was changed
         display_clip_in_monitor(clip_monitor_currently_active = True)
@@ -572,6 +557,8 @@ def update_frame_displayers(frame):
     norm_pos = frame / float(producer_length) 
     gui.pos_bar.set_normalized_pos(norm_pos)
 
+    kftoolmode.update_clip_frame(frame)
+    
     gui.tline_scale.widget.queue_draw()
     gui.tline_canvas.widget.queue_draw()
     gui.big_tc.queue_draw()
@@ -591,10 +578,7 @@ def display_marks_tc():
     else:
         update_seqence_info_text()
 
-# ----------------------------------------------- clip editors
-def clip_removed_during_edit(clip):
-    clipeffectseditor.clip_removed_during_edit(clip)
-    
+# ----------------------------------------------- clip editors    
 def clear_clip_from_editors(clip):
     if clipeffectseditor.clip == clip:
         clipeffectseditor.clear_clip()
@@ -609,7 +593,8 @@ def open_clip_in_effects_editor(data):
 # ----------------------------------------- edit modes
 def set_trim_mode_gui():
     """
-    Called when user selects trim mode
+    Called when user selects trim mode.
+    This does not actually set GUI, just makes sure we are displaying timeline since we are ready to strart trimmng sometring in it.
     """
     display_sequence_in_monitor()
 
@@ -640,9 +625,3 @@ def set_transition_render_edit_menu_items_sensitive(range_start, range_end):
         render_transition.set_sensitive(False)
         render_fade.set_sensitive(False)
 
-"""
-# ------------------------------------------------ notebook
-def switch_notebook_panel(index):
-    gui.middle_notebook.set_current_page(index)
-
-"""

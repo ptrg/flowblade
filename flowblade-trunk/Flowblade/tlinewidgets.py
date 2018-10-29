@@ -201,8 +201,8 @@ COMPOSITOR_CLIP_SELECTED = (0.5, 0.5, 0.7, 0.8)
 BLANK_CLIP_COLOR_GRAD = (1, 0.6, 0.6, 0.65, 1)
 BLANK_CLIP_COLOR_GRAD_L = (0, 0.6, 0.6, 0.65, 1)
 
-BLANK_CLIP_COLOR_SELECTED_GRAD = (1, 0.80, 0.80, 0.80, 1)
-BLANK_CLIP_COLOR_SELECTED_GRAD_L = (0, 0.80, 0.80, 0.80, 1)
+BLANK_CLIP_COLOR_SELECTED_GRAD = (1, 0.50, 0.50, 0.50, 1)
+BLANK_CLIP_COLOR_SELECTED_GRAD_L = (0, 0.50, 0.50, 0.5, 1)
 
 SINGLE_TRACK_TRANSITION_SELECTED = (0.8, 0.8, 1.0)
 
@@ -261,18 +261,9 @@ TRACK_NAME_COLOR = (0.0,0.0,0.0) #
 TRACK_GRAD_STOP1 = (1, 0.5, 0.5, 0.55, 1) #0.93, 0.93, 0.93, 1)
 TRACK_GRAD_STOP3 = (0, 0.5, 0.5, 0.55, 1) #0.58, 0.58, 0.58, 1) #(0, 0.84, 0.84, 0.84, 1)
 
-"""
-TRACK_GRAD_STOP1 = (1, 0.68, 0.68, 0.68, 1) #0.93, 0.93, 0.93, 1)
-TRACK_GRAD_STOP3 = (0, 0.93, 0.93, 0.93, 1) #0.58, 0.58, 0.58, 1) 
-"""
-
 TRACK_GRAD_ORANGE_STOP1 = (1, 0.65, 0.65, 0.65, 1)
 TRACK_GRAD_ORANGE_STOP3 = (0, 0.65, 0.65, 0.65, 1)
 
-"""
-TRACK_GRAD_STOP1 = (1,  0.12, 0.14, 0.2, 1)
-TRACK_GRAD_STOP1 = (1,  0.12, 0.14, 0.2, 1)
-"""
 LIGHT_MULTILPLIER = 1.14
 DARK_MULTIPLIER = 0.74
 
@@ -290,6 +281,8 @@ pos = 0 # Current left most frame in timeline display
 # Cursor communicates current pointer contest to user.
 pointer_context = appconsts.POINTER_CONTEXT_NONE
 DRAG_SENSITIVITY_AREA_WIDTH_PIX = 10
+MULTI_TRIM_ROLL_SENSITIVITY_AREA_WIDTH_PIX = 8
+MULTI_TRIM_SLIP_SENSITIVITY_AREA_WIDTH_PIX = 14
 
 # ref to singleton TimeLineCanvas instance for mode setting and some position
 # calculations.
@@ -1202,8 +1195,11 @@ def draw_cut_overlay(cr, data):
     pass
 
 def draw_kftool_overlay(cr, data):
-    draw_function = data["draw_function"]
-    draw_function(cr, pos)
+    # This is bit different because editing happens on overlay, which needs to much more complex and code part of tool module.
+    if data == None:
+        return
+    draw_function = data["draw_function"] # this is kftoolmode._tline_overlay(cr)
+    draw_function(cr)
     
 def draw_compositor_trim(cr, data):
     clip_in = data["clip_in"]
@@ -1406,6 +1402,10 @@ class TimeLineCanvas:
 
         self.widget.leave_notify_func = leave_notify_listener
         self.widget.enter_notify_func = enter_notify_listener
+
+        self.mouse_scroll_listener = mouse_scroll_listener
+        self.leave_notify_listener = leave_notify_listener
+        self.enter_notify_listener = enter_notify_listener
         
         # Edit mode
         self.edit_mode_data = None
@@ -1497,7 +1497,6 @@ class TimeLineCanvas:
 
         clip_start_frame = track.clip_start(clip_index)
         clip_end_frame = track.clip_start(clip_index + 1)
-        
         # INSERT, OVEWRITE
         if (EDIT_MODE() == editorstate.INSERT_MOVE or EDIT_MODE() == editorstate.OVERWRITE_MOVE) and editorstate.overwrite_mode_box == False:
             if abs(x - _get_frame_x(clip_start_frame)) < DRAG_SENSITIVITY_AREA_WIDTH_PIX:
@@ -1515,11 +1514,46 @@ class TimeLineCanvas:
         # BOX
         elif (EDIT_MODE() == editorstate.OVERWRITE_MOVE and editorstate.overwrite_mode_box == True and 
             boxmove.box_selection_data != None):
+
             if boxmove.box_selection_data.is_hit(x, y):
                 return appconsts.POINTER_CONTEXT_BOX_SIDEWAYS
+        # MULTI TRIM
+        elif EDIT_MODE() == editorstate.MULTI_TRIM:
+            editorstate.set_mouse_current_non_drag_pos(x, y)
+            clip_start_frame_x = _get_frame_x(clip_start_frame)
+            clip_end_frame_x = _get_frame_x(clip_end_frame)
+            clip_center_x = (clip_end_frame_x - clip_start_frame_x) / 2 + clip_start_frame_x
+            if abs(x - clip_start_frame_x) < MULTI_TRIM_ROLL_SENSITIVITY_AREA_WIDTH_PIX:
+                return appconsts.POINTER_CONTEXT_MULTI_ROLL
+            elif abs(x - clip_end_frame_x) < MULTI_TRIM_ROLL_SENSITIVITY_AREA_WIDTH_PIX:
+                return appconsts.POINTER_CONTEXT_MULTI_ROLL
+            elif abs(x - clip_center_x) < MULTI_TRIM_SLIP_SENSITIVITY_AREA_WIDTH_PIX:
+                return appconsts.POINTER_CONTEXT_MULTI_SLIP
+            elif abs(frame - clip_start_frame) < abs(frame - clip_end_frame):
+                return appconsts.POINTER_CONTEXT_TRIM_LEFT
+            else:
+                return appconsts.POINTER_CONTEXT_TRIM_RIGHT
                 
         return appconsts.POINTER_CONTEXT_NONE
-            
+
+    def connect_mouse_events(self):
+        self.widget.press_func = self._press_event
+        self.widget.motion_notify_func = self._motion_notify_event
+        self.widget.release_func = self._release_event
+
+        self.widget.mouse_scroll_func = self.mouse_scroll_listener
+        self.widget.leave_notify_func = self.leave_notify_listener
+        self.widget.enter_notify_func = self.enter_notify_listener
+        
+    def disconnect_mouse_events(self):
+        self.widget.press_func = self.widget._press
+        self.widget.motion_notify_func = self.widget._motion_notify
+        self.widget.release_func = self.widget._release
+
+        self.widget.mouse_scroll_func = None
+        self.widget.leave_notify_func = self.widget._leave
+        self.widget.enter_notify_func = self.widget._enter
+        
     #----------------------------------------- DRAW
     def _draw(self, event, cr, allocation):
         x, y, w, h = allocation
@@ -1689,7 +1723,6 @@ class TimeLineCanvas:
                         cr.set_source_rgb(*AUDIO_CLIP_SELECTED_COLOR)
                 
                 # Clip bg
-                #cr.rectangle(scale_in, y, scale_length, track_height)
                 self.create_round_rect_path(cr, scale_in, y, scale_length, track_height)
                 cr.fill()
 
@@ -1867,11 +1900,6 @@ class TimeLineCanvas:
             self.create_round_rect_path(cr, scale_in,
                                          y, scale_length, 
                                          track_height)
-            """
-            cr.rectangle(scale_in + 0.5,
-                         y + 0.5, scale_length, 
-                         track_height)
-            """
             cr.stroke()
         
             # No further drawing for blank clips
@@ -1944,35 +1972,6 @@ class TimeLineCanvas:
 
                 cr.fill()
                 cr.restore()
-    
-            """
-            # Emboss
-            if scale_length > EMBOSS_MIN:
-                # Corner points
-                left = scale_in + 1.5
-                up = y + 1.5
-                right = left + scale_length - 2.0
-                down = up + track_height - 2.0
-                
-                # Draw lines
-                cr.set_source_rgb(0.75, 0.43, 0.79)
-                cr.move_to(left, down)
-                cr.line_to(left, up)
-                cr.stroke()
-                
-                cr.move_to(left, up)
-                cr.line_to(right, up)
-                cr.stroke()
-                
-                cr.set_source_rgb(0.47, 0.28, 0.51)
-                cr.move_to(right, up)
-                cr.line_to(right, down)
-                cr.stroke()
-                
-                cr.move_to(right, down)
-                cr.line_to(left, down)
-                cr.stroke()
-            """
             
             # Draw text and filter, sync icons
             if scale_length > TEXT_MIN:
@@ -2452,7 +2451,7 @@ class TimeLineFrameScale:
         if self.drag_on:
             frame = current_sequence().get_seq_range_frame(get_frame(event.x))
             PLAYER().seek_frame(frame) 
-        
+            clipeffectseditor.update_kfeditors_sliders(frame)
         self.drag_on = False
 
     # --------------------------------------------- DRAW
@@ -2683,7 +2682,106 @@ class TimeLineFrameScale:
         grad.add_color_stop_rgba(0, r + 0.05, g + 0.05, b + 0.05, 1)
         
         return grad
+
+class KFToolFrameScale:
+    
+    def __init__(self, line_color):
+        self.line_color = line_color
+    
+    def draw(self, cr, clip_start_in_timeline, clip_length, ytop, ybottom):
+        # Get frames per second value
+        seq = current_sequence()
+        fps = seq.profile.fps()
         
+        # Get frame draw range
+        view_start_frame = clip_start_in_timeline
+        view_end_frame = clip_start_in_timeline + clip_length
+
+        # Get draw steps for marks and tc texts
+        if fps < 20:
+            spacer_mult = 2 # for fps like 15 this looks bad with out some help
+        else:
+            spacer_mult = 1
+
+        big_tick_step = -1 # this isn't rendered most ranges, -1 is flag
+      
+        # Decide on draw steps based zoom level     
+        if pix_per_frame > DRAW_THRESHOLD_1:
+            small_tick_step = 1
+            big_tick_step = fps / 2
+            tc_draw_step = (fps * spacer_mult)  / 2
+        elif pix_per_frame > DRAW_THRESHOLD_2:
+            small_tick_step = fps * spacer_mult
+            tc_draw_step = fps * spacer_mult
+        elif pix_per_frame > DRAW_THRESHOLD_3:
+            small_tick_step = fps * 2 * spacer_mult
+            tc_draw_step = fps * 2 * spacer_mult
+        elif pix_per_frame > DRAW_THRESHOLD_4:
+            small_tick_step = fps * 3 * spacer_mult
+            tc_draw_step = fps * 3 * 2
+        else:
+            end_frame = int(pos + gui.tline_canvas.widget.get_allocation().width / pix_per_frame)
+            view_length = end_frame - pos
+            small_tick_step = int(view_length / NUMBER_OF_LINES)
+            tc_draw_step = int(view_length / NUMBER_OF_LINES)
+
+        # TC font
+        cr.select_font_face ("sans-serif",
+                              cairo.FONT_SLANT_NORMAL,
+                              cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(11)
+
+
+        # Set line attrs for frames lines
+        cr.set_source_rgb(*self.line_color)
+        cr.set_line_width(1.0)
+        
+        # 23.98 and 29.97 need this to get drawn on even seconds with big ticks and tcs
+        if round(fps) != fps:
+            to_seconds_fix_add = 1.0
+        else:
+            to_seconds_fix_add = 0.0
+
+        # Draw lines and TC
+        # Draw big tick lines, if required
+        if big_tick_step != -1:
+            count = int(seq.get_length() / big_tick_step)
+            for i in range(1, count):
+                x = math.floor((math.floor(i * big_tick_step) + to_seconds_fix_add) * pix_per_frame \
+                    - pos * pix_per_frame) + 0.5 
+                cr.move_to(x, ytop)
+                cr.line_to(x, ybottom)
+                cr.stroke()
+        else:
+            if tc_draw_step != small_tick_step:
+                start = int(view_start_frame / tc_draw_step)
+                # Get draw range in steps from 0
+                if start == pos:
+                    start += 1 # don't draw line on first pixel of scale display
+                # +1 to ensure coverage
+                end = int(view_end_frame / tc_draw_step) + 1 
+                for i in range(start, end):
+
+                    x = math.floor((math.floor(i * tc_draw_step) + to_seconds_fix_add) * pix_per_frame \
+                        - pos * pix_per_frame) + 0.5
+                    
+                    cr.move_to(x, ytop)
+                    cr.line_to(x, ybottom)
+                    cr.stroke()
+            else:
+                # Get draw range in steps from 0
+                start = int(view_start_frame / small_tick_step)
+                if start * small_tick_step == pos:
+                    start += 1 # don't draw line on first pixel of scale display
+                # +1 to ensure coverage
+                end = int(view_end_frame / small_tick_step) + 1 
+                for i in range(start, end):
+                    x = math.floor(i * small_tick_step * pix_per_frame - pos * pix_per_frame) + 0.5 
+                    cr.move_to(x, ytop)
+                    cr.line_to(x, ybottom)
+                    cr.stroke()
+
+
 class TimeLineScroller(Gtk.HScrollbar):
     """
     Scrollbar for timeline.

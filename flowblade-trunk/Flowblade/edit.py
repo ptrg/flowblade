@@ -27,6 +27,7 @@ EditAction objects and placing them on the undo/redo stack.
 """
 
 import appconsts
+import clipeffectseditor
 import compositeeditor
 import compositorfades
 from editorstate import current_sequence
@@ -82,7 +83,6 @@ def _remove_clip(track, index):
     """
     track.remove(index)
     clip = track.clips.pop(index)
-    updater.clip_removed_during_edit(clip)
     resync.clip_removed_from_timeline(clip)
     
     return clip
@@ -411,7 +411,11 @@ class EditAction:
         updater.update_tline_scrollbar() # Slider needs to adjust to possily new program length.
                                          # This REPAINTS TIMELINE as a side effect.
         if self.clear_effects_editor_for_multitrack_edit == False:
-            updater.update_kf_editor()
+            if current_sequence().clip_is_in_sequence(clipeffectseditor.clip) == True:
+                updater.update_kf_editor()
+                clipeffectseditor.reinit_current_effect()
+            else:
+                updater.clear_kf_editor()
         else:
             updater.clear_kf_editor()
 
@@ -420,7 +424,7 @@ class EditAction:
             current_sequence().update_trim_hack_blank_length() # NEEDED FOR TRIM CRASH HACK, REMOVE IF FIXED
         PLAYER().display_inside_sequence_length(current_sequence().seq_len) # NEEDED FOR TRIM CRASH HACK, REMOVE IF FIXED
 
-        updater. update_seqence_info_text()
+        updater.update_seqence_info_text()
 
 # ---------------------------------------------------- compositor sync util methods
 def get_full_compositor_sync_data():
@@ -1899,7 +1903,6 @@ def _add_compositor_redo(self):
     current_sequence().add_compositor(self.compositor)
     current_sequence().restack_compositors()
 
-    compositorfades.add_default_fades(self.compositor, self.clip)
     self.compositor.update_autofade_keyframes()
     
     compositeeditor.set_compositor(self.compositor)
@@ -1949,7 +1952,7 @@ def _move_compositor_undo(self):
     move_compositor = current_sequence().get_compositor_for_destroy_id(self.destroy_id)
     move_compositor.set_in_and_out(self.orig_in, self.orig_out)
 
-    compositeeditor.set_compositor(self.compositor)
+    compositeeditor.set_compositor(self.compositor) # This is different to updating e.g filter kfeditors, those are done in EditAction._update_gui()
 
 def _move_compositor_redo(self):
     # Compositors are recreated continually in sequence.restack_compositors() and cannot be identified for undo/redo using object identity 
@@ -1963,7 +1966,7 @@ def _move_compositor_redo(self):
     move_compositor = current_sequence().get_compositor_for_destroy_id(self.destroy_id)
     move_compositor.set_in_and_out(self.clip_in, self.clip_out)
 
-    compositeeditor.set_compositor(self.compositor)
+    compositeeditor.set_compositor(self.compositor) # This is different to updating e.g filter kfeditors, those are done in EditAction._update_gui()
 
 #----------------- AUDIO SPLICE
 # "parent_clip", "audio_clip", "track"
@@ -2506,7 +2509,23 @@ def _range_delete_redo(self):
     
     # HACK, see EditAction for details
     self.turn_on_stop_for_edit = True
+
+
+#----------------- RIPPLE DELETE 
+# "track","from_index","to_index"
+def ripple_delete_action(data):
+    action = EditAction(_ripple_delete_undo, _ripple_delete_redo, data)
+    action.stop_for_edit = True
+    return action
+
+def _ripple_delete_undo(self):
+    _multi_move_undo(self)
+    _lift_multiple_undo(self)
     
+def _ripple_delete_redo(self):
+    _lift_multiple_redo(self)
+    _multi_move_redo(self)
+
 
 #------------------- ADD CENTERED TRANSITION
 # "transition_clip","transition_index", "from_clip","to_clip","track","from_in","to_out"

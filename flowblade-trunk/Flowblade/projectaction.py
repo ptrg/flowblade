@@ -174,6 +174,7 @@ class LoadThread(threading.Thread):
             render.set_saved_gui_selections(selections)
         updater.set_info_icon(None)
         dialog.destroy()
+        gui.tline_canvas.connect_mouse_events() # mouse events dutring load cause crashes because there is no data to handle
         Gdk.threads_leave()
 
         ticker.stop_ticker()
@@ -241,6 +242,7 @@ class AddMediaFilesThread(threading.Thread):
 
         normal_cursor = Gdk.Cursor.new(Gdk.CursorType.LEFT_PTR) #RTL
         gui.editor_window.window.get_window().set_cursor(normal_cursor)
+        gui.editor_window.bin_info.display_bin_info()
         Gdk.threads_leave()
 
         if len(duplicates) > 0:
@@ -395,6 +397,7 @@ def _close_dialog_callback(dialog, response_id):
     app.open_project(new_project)
     
 def actually_load_project(filename, block_recent_files=False):
+    gui.tline_canvas.disconnect_mouse_events() # mouse events dutring load cause crashes because there is no data to handle
     load_launch = LoadThread(filename, block_recent_files)
     load_launch.start()
 
@@ -1086,14 +1089,14 @@ def delete_media_files(force_delete=False):
     for i in bin_indexes:
         current_bin().file_ids.pop(i)
     update_current_bin_files_count()
-        
+    
     # Delete from project
     for file_id in file_ids:
         PROJECT().media_files.pop(file_id)
 
     gui.media_list_view.fill_data_model()
-
     _enable_save()
+    gui.editor_window.bin_info.display_bin_info()
 
 def _proxy_delete_warning_callback(dialog, response_id):
     dialog.destroy()
@@ -1166,7 +1169,7 @@ def _display_file_info(media_file):
     try:
         num = info["fps_num"]
         den = info["fps_den"]
-        fps = float(num/den) 
+        fps = utils.get_fps_str_with_two_decimals(str(float(num/den)))
     except:
         fps = _("N/A")
     
@@ -1311,6 +1314,18 @@ def bins_panel_popup_requested(event):
 
     bin_menu.add(guiutils.get_menu_item(_("Add Bin"), _bin_menu_item_selected, ("add bin", None)))
     bin_menu.add(guiutils.get_menu_item(_("Delete Selected Bin"), _bin_menu_item_selected, ("delete bin", None)))
+
+    guiutils.add_separetor(bin_menu)
+    
+    move_menu_item = Gtk.MenuItem(_("Move Bin").encode('utf-8'))
+    move_menu = Gtk.Menu()
+    move_menu.add(guiutils.get_menu_item(_("Up"), _bin_menu_item_selected, ("up bin", None)))
+    move_menu.add(guiutils.get_menu_item(_("Down"), _bin_menu_item_selected, ("down bin", None)))
+    move_menu.add(guiutils.get_menu_item(_("First"), _bin_menu_item_selected, ("first bin", None)))
+    move_menu.add(guiutils.get_menu_item(_("Last"), _bin_menu_item_selected, ("last bin", None)))
+    move_menu_item.set_submenu(move_menu)
+    bin_menu.add(move_menu_item)
+    move_menu_item.show()
     
     bin_menu.popup(None, None, None, None, event.button, event.time)    
 
@@ -1320,7 +1335,35 @@ def _bin_menu_item_selected(widget, data):
         add_new_bin()
     elif msg == "delete bin":
         delete_selected_bin()
+    elif msg == "up bin":
+        c_index = PROJECT().bins.index(PROJECT().c_bin)
+        if c_index == 0 or len(PROJECT().bins) == 1:
+            return
+        _move_bin(c_index, c_index - 1)
+    elif msg == "down bin":
+        c_index = PROJECT().bins.index(PROJECT().c_bin)
+        if c_index >= len(PROJECT().bins) - 1:
+            return # already last
+        _move_bin(c_index, c_index + 1)
+    elif msg == "first bin":
+        c_index = PROJECT().bins.index(PROJECT().c_bin)
+        if c_index == 0 or len(PROJECT().bins) == 1:
+            return
+        _move_bin(c_index, 0)
+    elif msg == "last bin":
+        c_index = PROJECT().bins.index(PROJECT().c_bin)
+        if c_index >= len(PROJECT().bins) - 1:
+            return # already last
+        _move_bin(c_index, len(PROJECT().bins) - 1)
 
+def _move_bin(pop_index, insert_index):
+    PROJECT().bins.pop(pop_index)
+    PROJECT().bins.insert(insert_index, PROJECT().c_bin)
+    gui.bin_list_view.fill_data_model()
+    selection = gui.bin_list_view.treeview.get_selection()
+    model, iterator = selection.get_selected()
+    selection.select_path(str(insert_index))
+    
 def add_new_bin():
     """
     Adds new unnamed bin and sets it selected 
@@ -1331,6 +1374,7 @@ def add_new_bin():
     model, iterator = selection.get_selected()
     selection.select_path(str(len(model)-1))
     _enable_save()
+    gui.editor_window.bin_info.display_bin_info()
 
 def delete_selected_bin():
     """
@@ -1360,6 +1404,7 @@ def delete_selected_bin():
     # Set first bin selected, listener 'bin_selection_changed' updates editorstate.project.c_bin
     selection.select_path("0")
     _enable_save()
+    gui.editor_window.bin_info.display_bin_info()
                   
 def bin_name_edited(cell, path, new_text, user_data):
     """
@@ -1373,6 +1418,7 @@ def bin_name_edited(cell, path, new_text, user_data):
     liststore[path][column] = new_text
     PROJECT().bins[int(path)].name = new_text
     _enable_save()
+    gui.editor_window.bin_info.display_bin_info()
 
 def update_current_bin_files_count():
     # Get index for selected bin
@@ -1404,6 +1450,7 @@ def bin_selection_changed(selection):
     # Set current and display
     PROJECT().c_bin = PROJECT().bins[row]
     gui.media_list_view.fill_data_model()
+    gui.editor_window.bin_info.display_bin_info()
     
 def move_files_to_bin(new_bin, bin_indexes):
     # If we're moving clips to bin that they're already in, do nothing.
@@ -1424,6 +1471,13 @@ def move_files_to_bin(new_bin, bin_indexes):
     gui.media_list_view.fill_data_model()
     gui.bin_list_view.fill_data_model()
 
+    # We need to select current gin again to show it selected in GUI
+    selection = gui.bin_list_view.treeview.get_selection()
+    model, iterator = selection.get_selected()
+    c_bin_index = PROJECT().bins.index(PROJECT().c_bin)
+    selection.select_path(str(c_bin_index))
+    
+    gui.editor_window.bin_info.display_bin_info()
     
     
 # ------------------------------------ sequences

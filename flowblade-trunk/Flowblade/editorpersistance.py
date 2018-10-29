@@ -197,7 +197,7 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     
     # Jul-2016 - SvdB - Added play_pause_button
     # Apr-2017 - SvdB - Added ffwd / rev values
-    gfx_length_spin, cover_delete, mouse_scroll_action, hide_file_ext_button = edit_prefs_widgets
+    gfx_length_spin, cover_delete, mouse_scroll_action, hide_file_ext_button, hor_scroll_dir, kf_edit_playhead_move = edit_prefs_widgets
     
     auto_center_check, play_pause_button, auto_center_on_updown, \
     ffwd_rev_shift_spin, ffwd_rev_ctrl_spin, ffwd_rev_caps_spin, follow_move_range = playback_prefs_widgets
@@ -218,10 +218,12 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     prefs.auto_center_on_play_stop = auto_center_check.get_active()
     prefs.default_grfx_length = int(gfx_length_spin.get_adjustment().get_value())
     prefs.trans_cover_delete = cover_delete.get_active()
+    prefs.kf_edit_init_affects_playhead = kf_edit_playhead_move.get_active()
     # Jul-2016 - SvdB - For play/pause button
     prefs.play_pause = play_pause_button.get_active()
     prefs.hide_file_ext = hide_file_ext_button.get_active()
     prefs.mouse_scroll_action_is_zoom = (mouse_scroll_action.get_active() == 0)
+    prefs.scroll_horizontal_dir_up_forward = (hor_scroll_dir.get_active() == 0)
     # Apr-2017 - SvdB - ffwd / rev values
     prefs.ffwd_rev_shift = int(ffwd_rev_shift_spin.get_adjustment().get_value())
     prefs.ffwd_rev_ctrl = int(ffwd_rev_ctrl_spin.get_adjustment().get_value())
@@ -297,7 +299,7 @@ class EditorPreferences:
         self.midbar_tc_left = True
         self.default_layout = True
         self.exit_allocation = (0, 0)
-        self.media_columns = 2
+        self.media_columns = 3
         self.app_v_paned_position = 500 # Paned get/set position value
         self.top_paned_position = 600 # Paned get/set position value
         self.mm_paned_position = 260 # Paned get/set position value
@@ -315,7 +317,7 @@ class EditorPreferences:
         self.jack_output_type = appconsts.JACK_OUT_AUDIO # not used
         self.media_load_order = appconsts.LOAD_ABSOLUTE_FIRST
         self.use_english_always = False
-        self.theme_fallback_colors = 0 # index of gui._THEME_COLORS
+        self.theme_fallback_colors = 4 # index of gui._THEME_COLORS
         self.display_all_audio_levels = True
         self.overwrite_clip_drop = True # DEPRECATED, "dnd_action" used instead
         self.trans_cover_delete = True
@@ -348,3 +350,8 @@ class EditorPreferences:
         self.theme = appconsts.FLOWBLADE_THEME
         self.dnd_action = appconsts.DND_OVERWRITE_NON_V1
         self.top_row_layout = appconsts.THREE_PANELS_IF_POSSIBLE
+        self.box_for_empty_press_in_overwrite_tool = False
+        self.scroll_horizontal_dir_up_forward = True
+        self.kf_edit_init_affects_playhead = True
+        self.show_tool_tooltips = True
+        

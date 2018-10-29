@@ -63,6 +63,7 @@ import editorwindow
 import gmic
 import gui
 import keyevents
+import keyframeeditcanvas
 import kftoolmode
 import medialog
 import mltenv
@@ -87,6 +88,7 @@ import resync
 import sequence
 import shortcuts
 import snapping
+import threading
 import titler
 import tlinewidgets
 import toolsintegration
@@ -97,9 +99,6 @@ import undo
 import updater
 import utils
 import workflow
-
-
-import jackaudio
 
 AUTOSAVE_DIR = appconsts.AUTOSAVE_DIR
 AUTOSAVE_FILE = "autosave/autosave"
@@ -151,7 +150,6 @@ def main(root_path):
     except:
         editorstate.mlt_version = "0.0.99" # magic string for "not found"
 
-
     #print "SDL version:", str(editorstate.get_sdl_version())
     
     # passing -xdg as a flag will change the user_dir location with XDG_CONFIG_HOME
@@ -163,6 +161,7 @@ def main(root_path):
 
     # Create hidden folders if not present
     user_dir = utils.get_hidden_user_dir_path()
+
     print "User dir:",user_dir
     if not os.path.exists(user_dir):
         os.mkdir(user_dir)
@@ -359,6 +358,12 @@ def main(root_path):
     #    global sdl2_timeout_id
     #    sdl2_timeout_id = GObject.timeout_add(1500, create_sdl_2_consumer)
     
+    # In PositionNumericalEntries we are using Gtk.Entry objects in a way that works us nicely, but is somehow "error" for Gtk, so we just kill this.
+    Gtk.Settings.get_default().set_property("gtk-error-bell", False)
+    
+    # Show first run worflow info dialog.
+    #GObject.timeout_add(500, show_worflow_info_dialog)
+                
     # Launch gtk+ main loop
     Gtk.main()
 
@@ -504,6 +509,7 @@ def init_project_gui():
     gui.bin_list_view.fill_data_model()
     selection = gui.bin_list_view.treeview.get_selection()
     selection.select_path("0")
+    gui.editor_window.bin_info.display_bin_info()
 
     # Display sequences in "Project" tab
     gui.sequence_list_view.fill_data_model()
@@ -778,18 +784,27 @@ def destroy_splash_screen():
     splash_screen.destroy()
     GObject.source_remove(splash_timeout_id)
 
+
+def show_worflow_info_dialog():
+    worflow_info_dialog = workflow.WorkflowDialog()
+    return False
+    
 # ------------------------------------------------------- small screens
 def _set_draw_params():
     if editorstate.screen_size_small_width() == True:
-        appconsts.NOTEBOOK_WIDTH = 450
-        editorwindow.MONITOR_AREA_WIDTH = 450
+        appconsts.NOTEBOOK_WIDTH = 400
+        editorwindow.MONITOR_AREA_WIDTH = 400
         editorwindow.MEDIA_MANAGER_WIDTH = 100
         
     if editorstate.screen_size_small_height() == True:
         appconsts.TOP_ROW_HEIGHT = 10
         projectinfogui.PROJECT_INFO_PANEL_HEIGHT = 140
+        tlinewidgets.HEIGHT = 252
+        
+    if editorstate.screen_size_large_height() == True:
+        keyframeeditcanvas.GEOMETRY_EDITOR_HEIGHT = 300
 
-    if editorstate.SCREEN_WIDTH < 1153 and editorstate.SCREEN_HEIGHT < 865:
+    if editorstate.SCREEN_WIDTH < 1153 or editorstate.SCREEN_HEIGHT < 865:
         editorwindow.MONITOR_AREA_WIDTH = 400
         positionbar.BAR_WIDTH = 100
 
@@ -856,6 +871,14 @@ def _shutdown_dialog_callback(dialog, response_id):
 
     # --- APP SHUT DOWN --- #
     print "Exiting app..."
+    # Sep-2018 - SvdB - Stop wave form threads
+    for thread_termination in threading.enumerate():
+        # We only terminate threads with a 'process', as these are launched
+        # by the audiowaveformrenderer
+        try:
+            thread_termination.process.terminate()
+        except:
+            None
 
     # No more auto saving
     stop_autosave()

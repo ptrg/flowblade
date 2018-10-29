@@ -97,6 +97,7 @@ MULTIMOVE_CURSOR = None
 ONEROLL_RIPPLE_CURSOR = None
 CUT_CURSOR = None
 KF_TOOL_CURSOR = None
+MULTI_TRIM_CURSOR = None
 
 ONEROLL_TOOL = None
 OVERWRITE_TOOL = None
@@ -133,7 +134,7 @@ class EditorWindow:
         global INSERTMOVE_CURSOR, OVERWRITE_CURSOR, TWOROLL_CURSOR, ONEROLL_CURSOR, \
         ONEROLL_NO_EDIT_CURSOR, TWOROLL_NO_EDIT_CURSOR, SLIDE_CURSOR, SLIDE_NO_EDIT_CURSOR, \
         MULTIMOVE_CURSOR, MULTIMOVE_NO_EDIT_CURSOR, ONEROLL_RIPPLE_CURSOR, ONEROLL_TOOL, \
-        OVERWRITE_BOX_CURSOR, OVERWRITE_TOOL, CUT_CURSOR, KF_TOOL_CURSOR
+        OVERWRITE_BOX_CURSOR, OVERWRITE_TOOL, CUT_CURSOR, KF_TOOL_CURSOR, MULTI_TRIM_CURSOR
         
         INSERTMOVE_CURSOR = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "insertmove_cursor.png")
         OVERWRITE_CURSOR = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "overwrite_cursor.png")
@@ -151,7 +152,8 @@ class EditorWindow:
         OVERWRITE_TOOL = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "overwrite_tool.png")
         CUT_CURSOR = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "cut_cursor.png")
         KF_TOOL_CURSOR = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "kftool_cursor.png")
-
+        MULTI_TRIM_CURSOR = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "multitrim_cursor.png")
+        
         # Context cursors 
         self.context_cursors = {appconsts.POINTER_CONTEXT_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 3, 7),
                                 appconsts.POINTER_CONTEXT_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 14, 7),
@@ -160,7 +162,9 @@ class EditorWindow:
                                 appconsts.POINTER_CONTEXT_BOX_SIDEWAYS:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
                                 appconsts.POINTER_CONTEXT_COMPOSITOR_MOVE:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_sideways.png"), 9, 9),
                                 appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_LEFT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_left.png"), 9, 9),
-                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 9, 9)}
+                                appconsts.POINTER_CONTEXT_COMPOSITOR_END_DRAG_RIGHT:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "ctx_drag_right.png"), 9, 9),
+                                appconsts.POINTER_CONTEXT_MULTI_ROLL:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "tworoll_cursor.png"), 11, 9),
+                                appconsts.POINTER_CONTEXT_MULTI_SLIP:(cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "slide_cursor.png"), 9, 9)}
 
         # Window
         self.window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
@@ -350,16 +354,6 @@ class EditorWindow:
                     <menuitem action='AddMediaClip'/>
                     <menuitem action='AddImageSequence'/>
                     <separator/>
-                    <menu action='BinMenu'>
-                        <menuitem action='AddBin'/>
-                        <menuitem action='DeleteBin'/>
-                    </menu>
-                    <menu action='SequenceMenu'>
-                        <menuitem action='AddSequence'/>
-                        <menuitem action='EditSequence'/>
-                        <menuitem action='DeleteSequence'/>
-                    </menu>
-                    <separator/>
                     <menuitem action='CreateColorClip'/>
                     <menu action='PatternProducersMenu'>
                         <menuitem action='CreateNoiseClip'/>
@@ -373,12 +367,22 @@ class EditorWindow:
                         <menuitem action='AudioSyncCompoundClip'/>
                     </menu>
                     <separator/>
+                    <menu action='BinMenu'>
+                        <menuitem action='AddBin'/>
+                        <menuitem action='DeleteBin'/>
+                    </menu>
+                    <menu action='SequenceMenu'>
+                        <menuitem action='AddSequence'/>
+                        <menuitem action='EditSequence'/>
+                        <menuitem action='DeleteSequence'/>
+                        <separator/>
+                        <menuitem action='CombineSequences'/>
+                        <menuitem action='SequenceSplit'/>
+                    </menu>
+                    <separator/>
                     <menuitem action='ImportProjectMedia'/>
-                    <menuitem action='CombineSequences'/>
                     <separator/>
                     <menuitem action='LogClipRange'/>
-                    <separator/>
-                    <menuitem action='SequenceSplit'/>
                     <separator/>
                     <menuitem action='RecreateMediaIcons'/>
                     <menuitem action='RemoveUnusedMedia'/>
@@ -465,22 +469,24 @@ class EditorWindow:
         self.media_scroll_window.set_size_request(guicomponents.MEDIA_OBJECT_WIDGET_WIDTH * 2 + 70, guicomponents.MEDIA_OBJECT_WIDGET_HEIGHT)
         self.media_scroll_window.show_all()
 
-        media_panel = panels.get_media_files_panel(
-                                self.media_scroll_window,
-                                lambda w,e: projectaction.add_media_files(), 
-                                lambda w,e: projectaction.delete_media_files(),
-                                projectaction.columns_count_launch_pressed,
-                                projectaction.hamburger_pressed,  # lambda w,e: proxyediting.create_proxy_files_pressed(),
-                                projectaction.media_filtering_select_pressed)
+        media_panel, bin_info = panels.get_media_files_panel(
+                                    self.media_scroll_window,
+                                    lambda w,e: projectaction.add_media_files(), 
+                                    lambda w,e: projectaction.delete_media_files(),
+                                    projectaction.columns_count_launch_pressed,
+                                    projectaction.hamburger_pressed,  # lambda w,e: proxyediting.create_proxy_files_pressed(),
+                                    projectaction.media_filtering_select_pressed)
         guiutils.set_margins(media_panel, 6, 6, 4, 6)
         self.media_panel = media_panel
-
+        self.bin_info = bin_info
+        
         # Smallest screens always get bins in same panel as media, others get top level project panel if selected
         if top_level_project_panel() == True:
             self.mm_paned = Gtk.HBox()
             self.mm_paned.add(media_panel)
         else:
             self.mm_paned = Gtk.HPaned()
+            guiutils.set_margins(self.bins_panel, 6, 6, 8, 0)
             self.mm_paned.pack1(self.bins_panel, resize=True, shrink=True)
             self.mm_paned.pack2(media_panel, resize=True, shrink=False)
 
@@ -519,7 +525,6 @@ class EditorWindow:
         compositor_editor_panel = guiutils.set_margins(compositeeditor.widgets.value_edit_frame, 0, 0, 4, 0)
 
         compositors_hbox = Gtk.HBox()
-        #compositors_hbox.set_border_width(5)
         compositors_hbox.pack_start(compositor_editor_panel, True, True, 0)
 
         compositors_vbox = Gtk.VBox()
@@ -715,7 +720,7 @@ class EditorWindow:
         info_h = Gtk.HBox()
         info_h.pack_start(self.tline_info, False, False, 0)
         info_h.pack_start(Gtk.Label(), True, True, 0)
-        info_h.set_size_request(tlinewidgets.COLUMN_WIDTH - 22 - 22 - 22,# - 22, # room for 3 menu launch buttons 
+        info_h.set_size_request(tlinewidgets.COLUMN_WIDTH - 22 - 22 - 22,
                                       tlinewidgets.SCALE_HEIGHT)
 
         marker_surface =  cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "marker.png")
@@ -784,7 +789,6 @@ class EditorWindow:
         tline_pane = Gtk.VBox(False, 1)
         tline_pane.pack_start(self.edit_buttons_frame, False, True, 0)
         tline_pane.pack_start(self.tline_box, True, True, 0)
-        #tline_pane.override_background_color(Gtk.StateFlags.NORMAL, gui.get_bg_color())
         self.tline_pane = tline_pane
     
         # VPaned top row / timeline
@@ -803,7 +807,6 @@ class EditorWindow:
         menu_vbox.pack_start(self.monitor_source, False, False, 0)
         menu_vbox.pack_start(guiutils.pad_label(24, 10), False, False, 0)
         menu_vbox.pack_start(self.info1, False, False, 0)
-        #menu_vbox.pack_start(guiutils.pad_label(32, 10), False, False, 0)
         
         # Pane
         pane = Gtk.VBox(False, 1)
@@ -901,7 +904,6 @@ class EditorWindow:
         mb_menu = Gtk.Menu()
         tc_left = Gtk.RadioMenuItem()
         tc_left.set_label(_("Timecode Left").encode('utf-8'))
-        #tc_left.set_active(appconsts)
         tc_left.connect("activate", lambda w: middlebar._show_buttons_TC_LEFT_layout(w))
         mb_menu.append(tc_left)
 
@@ -944,13 +946,6 @@ class EditorWindow:
 
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
-
-        """
-        show_monitor_info_item = Gtk.CheckMenuItem(_("Show Monitor Sequence Profile").encode('utf-8'))
-        show_monitor_info_item.set_active(editorpersistance.prefs.show_sequence_profile)
-        show_monitor_info_item.connect("toggled", lambda w: middlebar._show_monitor_info_toggled(w))
-        menu.append(show_monitor_info_item)
-        """
         
         sep = Gtk.SeparatorMenuItem()
         menu.append(sep)
@@ -1077,7 +1072,7 @@ class EditorWindow:
 
     def _get_edit_buttons_row(self):
         tools_pixbufs = [INSERTMOVE_CURSOR, OVERWRITE_CURSOR, ONEROLL_CURSOR, ONEROLL_RIPPLE_CURSOR, \
-                         TWOROLL_CURSOR, SLIDE_CURSOR, MULTIMOVE_CURSOR, OVERWRITE_BOX_CURSOR, CUT_CURSOR, KF_TOOL_CURSOR]
+                         TWOROLL_CURSOR, SLIDE_CURSOR, MULTIMOVE_CURSOR, OVERWRITE_BOX_CURSOR, CUT_CURSOR, KF_TOOL_CURSOR, MULTI_TRIM_CURSOR]
         middlebar.create_edit_buttons_row_buttons(self, tools_pixbufs)
     
         buttons_row = Gtk.HBox(False, 1)
@@ -1097,12 +1092,13 @@ class EditorWindow:
     def _add_tool_tips(self):
         self.big_TC.set_tooltip_text(_("Timeline current frame timecode"))
 
-        self.view_mode_select.widget.set_tooltip_text(_("Select view mode: Video/Vectorscope/RGBParade"))
+        self.view_mode_select.widget.set_tooltip_text(_("Select view mode: Video / Vectorscope/ RGBParade"))
+        self.trim_view_select.widget.set_tooltip_text(_("Set trim view and match frames"))
         
-        self.tc.widget.set_tooltip_text(_("Monitor Sequence/Media current frame timecode"))
-        self.monitor_source.set_tooltip_text(_("Current Monitor Sequence/Media name"))
+        self.tc.widget.set_tooltip_text(_("Sequence / Media current frame timecode"))
+        self.monitor_source.set_tooltip_text(_("Current Sequence / Clip name and length"))
     
-        self.pos_bar.widget.set_tooltip_text(_("Monitor Sequence/Media current position"))
+        self.pos_bar.widget.set_tooltip_text(_("Sequence / Media current position"))
         
         #self.sequence_editor_b.set_tooltip_text(_("Display Current Sequence on Timeline"))
         #self.clip_editor_b.set_tooltip_text(_("Display Monitor Clip"))
@@ -1111,6 +1107,37 @@ class EditorWindow:
         # First active tool is the default tool. So we need to always have atleast one tool available.
         self.change_tool(editorpersistance.prefs.active_tools[0])
 
+    def kf_tool_exit_to_mode(self, mode): # Kf tool can be entered from popup menu and it exists to mode it was started in.
+        tool_id = None
+        if mode == editorstate.INSERT_MOVE:
+            tool_id = appconsts.TLINE_TOOL_INSERT
+        elif mode == editorstate.OVERWRITE_MOVE:
+            if editorstate.overwrite_mode_box == False:
+                tool_id = appconsts.TLINE_TOOL_OVERWRITE
+            else:
+                tool_id = appconsts.TLINE_TOOL_BOX
+        elif mode == editorstate.ONE_ROLL_TRIM or mode == editorstate.ONE_ROLL_TRIM_NO_EDIT:
+            if editorstate.trim_mode_ripple == False: # this was not touched on entering KF tool
+                tool_id = appconsts.TLINE_TOOL_TRIM
+            else:
+                tool_id = appconsts.TLINE_TOOL_RIPPLE_TRIM
+        elif mode == editorstate.TWO_ROLL_TRIM or mode == editorstate.TWO_ROLL_TRIM_NO_EDIT:
+            tool_id = appconsts.TLINE_TOOL_ROLL
+        elif mode == editorstate.SLIDE_TRIM or mode == editorstate.SLIDE_TRIM_NO_EDIT:
+            tool_id = appconsts.TLINE_TOOL_SLIP
+        elif mode == editorstate.MULTI_MOVE:
+            tool_id = appconsts.TLINE_TOOL_SPACER
+        elif mode == editorstate.CUT:
+            tool_id = appconsts.TLINE_TOOL_CUT
+        elif mode == editorstate.KF_TOOL:
+            tool_id = appconsts.TLINE_TOOL_KFTOOL
+        elif mode == editorstate.MULTI_TRIM:
+            tool_id = appconsts.TLINE_TOOL_MULTI_TRIM
+        if tool_id != None:
+            self.change_tool(tool_id)
+        else:
+            print "kf_tool_exit_to_mode(): NO TOOL_ID!" # This should not happen, but lets print info instead of crashing if we get here
+       
     def change_tool(self, tool_id):
         if tool_id == appconsts.TLINE_TOOL_INSERT:
             self.handle_insert_move_mode_button_press()
@@ -1132,6 +1159,8 @@ class EditorWindow:
             self.handle_cut_mode_button_press()
         elif tool_id == appconsts.TLINE_TOOL_KFTOOL:
             self.handle_kftool_mode_button_press()
+        elif tool_id == appconsts.TLINE_TOOL_MULTI_TRIM:
+            self.handle_multitrim_mode_button_press()
         else:
             # We should not hit this
             print "editorwindow.change_tool() else: hit!"
@@ -1181,6 +1210,10 @@ class EditorWindow:
         modesetting.kftool_mode_pressed()
         self.set_cursor_to_mode()
 
+    def handle_multitrim_mode_button_press(self):
+        modesetting.multitrim_mode_pressed()
+        self.set_cursor_to_mode()
+        
     def toggle_trim_ripple_mode(self):
         editorstate.trim_mode_ripple = (editorstate.trim_mode_ripple == False)
         modesetting.stop_looping()
@@ -1189,12 +1222,6 @@ class EditorWindow:
         self.set_tool_selector_to_mode()
         self.set_tline_cursor(editorstate.EDIT_MODE())
         updater.set_trim_mode_gui()
-    
-    def toggle_overwrite_box_mode(self):
-        editorstate.overwrite_mode_box = (editorstate.overwrite_mode_box == False)
-        boxmove.clear_data()
-        self.set_tool_selector_to_mode()
-        self.set_tline_cursor(editorstate.EDIT_MODE())
 
     def mode_selector_pressed(self, selector, event):
         workflow.get_tline_tool_popup_menu(selector, event, self.tool_selector_item_activated)
@@ -1208,12 +1235,6 @@ class EditorWindow:
             self.handle_one_roll_mode_button_press()
         if tool == appconsts.TLINE_TOOL_RIPPLE_TRIM:
             self.handle_one_roll_ripple_mode_button_press()
-        """
-            if editorstate.edit_mode != editorstate.ONE_ROLL_TRIM and editorstate.edit_mode != editorstate.ONE_ROLL_TRIM_NO_EDIT:
-                self.handle_one_roll_mode_button_press()
-            else:
-                self.toggle_trim_ripple_mode()
-        """
         if tool == appconsts.TLINE_TOOL_ROLL:
             self.handle_two_roll_mode_button_press()
         if tool == appconsts.TLINE_TOOL_SLIP:
@@ -1226,6 +1247,8 @@ class EditorWindow:
             self.handle_cut_mode_button_press()
         if tool == appconsts.TLINE_TOOL_KFTOOL:
             self.handle_kftool_mode_button_press()
+        if tool == appconsts.TLINE_TOOL_MULTI_TRIM:
+            self.handle_multitrim_mode_button_press()
             
         self.set_cursor_to_mode()
         self.set_tool_selector_to_mode()
@@ -1251,7 +1274,10 @@ class EditorWindow:
             if editorstate.overwrite_mode_box == False:
                 cursor = self.get_own_cursor(display, OVERWRITE_CURSOR, 0, 0)
             else:
-                cursor = self.get_own_cursor(display, OVERWRITE_BOX_CURSOR, 6, 15)
+                if boxmove.entered_from_overwrite == False:
+                    cursor = self.get_own_cursor(display, OVERWRITE_BOX_CURSOR, 6, 15)
+                else:
+                    cursor = self.get_own_cursor(display, OVERWRITE_CURSOR, 0, 0)
         elif mode == editorstate.TWO_ROLL_TRIM:
             cursor = self.get_own_cursor(display, TWOROLL_NO_EDIT_CURSOR, 11, 9) 
         elif mode == editorstate.TWO_ROLL_TRIM_NO_EDIT:
@@ -1282,7 +1308,9 @@ class EditorWindow:
         elif mode == editorstate.CUT:
             cursor = self.get_own_cursor(display, CUT_CURSOR, 1, 8)
         elif mode == editorstate.KF_TOOL:
-            cursor = self.get_own_cursor(display, KF_TOOL_CURSOR, 1, 8)
+            cursor = self.get_own_cursor(display, KF_TOOL_CURSOR, 1, 0)
+        elif mode == editorstate.MULTI_TRIM:
+            cursor = self.get_own_cursor(display, MULTI_TRIM_CURSOR, 1, 0)
         else:
             cursor = Gdk.Cursor.new(Gdk.CursorType.LEFT_PTR)
         
@@ -1323,6 +1351,8 @@ class EditorWindow:
             self.tool_selector.set_tool_pixbuf(appconsts.TLINE_TOOL_CUT)
         elif editorstate.EDIT_MODE() == editorstate.KF_TOOL:
             self.tool_selector.set_tool_pixbuf(appconsts.TLINE_TOOL_KFTOOL)
+        elif editorstate.EDIT_MODE() == editorstate.MULTI_TRIM:
+            self.tool_selector.set_tool_pixbuf(appconsts.TLINE_TOOL_MULTI_TRIM)
             
     def tline_cursor_leave(self, event):
         cursor = Gdk.Cursor.new(Gdk.CursorType.LEFT_PTR)
@@ -1357,6 +1387,7 @@ class EditorWindow:
         self.info1.set_ellipsize(Pango.EllipsizeMode.END)
         self.info1.modify_font(Pango.FontDescription(font_desc))
         self.info1.set_sensitive(False)
+        self.info1.set_tooltip_text(_("In / Out / Marked Length"))
         
 def _this_is_not_used():
     print "THIS WAS USED!!!!!"

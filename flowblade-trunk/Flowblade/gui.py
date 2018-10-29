@@ -84,11 +84,12 @@ _UBUNTU_COLORS = ((0.949020, 0.945098, 0.941176),  (0.172, 0.172, 0.172), (0.941
 _GNOME_COLORS = ((0.929412, 0.929412, 0.929412), (0.172, 0.172, 0.172), (0.28627451, 0.560784314, 0.843137255), (0.192, 0.361, 0.608), "Gnome")
 _MINT_COLORS = ((0.839215686, 0.839215686, 0.839215686), (0.172, 0.172, 0.172), (0.556862745, 0.678431373, 0.439215686), (0.556862745, 0.678431373, 0.439215686), "Linux Mint")
 _ARC_COLORS = ((0.960784, 0.964706, 0.968627), (0.266667, 0.282353, 0.321569), (0.321568627, 0.580392157, 0.88627451), (0.321568627, 0.580392157, 0.88627451), "Arc (theme)")
+_FLOWBLADE_COLORS = ((0.960784, 0.964706, 0.968627), (0.266667, 0.282353, 0.321569), (0.1, 0.31, 0.58), (0.1, 0.31, 0.58), "Flowblade Theme")
 
 
-_THEME_COLORS = (_UBUNTU_COLORS, _GNOME_COLORS, _MINT_COLORS, _ARC_COLORS)
+_THEME_COLORS = (_UBUNTU_COLORS, _GNOME_COLORS, _MINT_COLORS, _ARC_COLORS, _FLOWBLADE_COLORS)
 
-_CURRENT_THEME_COLORS_FILE = "currentcolors.data"
+_CURRENT_THEME_COLORS_FILE = "currentcolors.data" # Used to communicate theme colors to tools like gmic.py running on separate process
 
 _selected_bg_color = None
 _bg_color = None
@@ -245,5 +246,5 @@ def apply_gtk_css():
     screen = display.get_default_screen()
     Gtk.StyleContext.add_provider_for_screen (screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     
-    provider.load_from_path(respaths.ROOT_PATH + "/res/css/gtk-dark-fix.css")
+    provider.load_from_path(respaths.ROOT_PATH + "/res/css/gtk-flowblade-dark.css")
 

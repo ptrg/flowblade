@@ -113,17 +113,8 @@ def cut_pressed():
     if not timeline_visible():
         updater.display_sequence_in_monitor()   
 
-    # Disable whencut action when it cut clash with ongoing edits
-    if EDIT_MODE() == editorstate.ONE_ROLL_TRIM or EDIT_MODE() == editorstate.TWO_ROLL_TRIM or EDIT_MODE() == editorstate.SLIDE_TRIM:
-        return
-
-    if EDIT_MODE() == editorstate.MULTI_MOVE and multimovemode.edit_data != None:
-        return
-
-    if EDIT_MODE() == editorstate.MULTI_MOVE and multimovemode.edit_data != None:
-        return
-        
-    if boxmove.box_selection_data != None:
+    # Disable cut action when it clashes with ongoing edits
+    if _can_do_cut() == False:
         return
     
     # Get cut frame
@@ -138,7 +129,7 @@ def cut_pressed():
         if track.active == False:
             continue
         
-        if editevent.track_lock_check_and_user_info(track, cut_pressed, "cut"): # so the other tracks get cut...
+        if dialogutils.track_lock_check_and_user_info(track): # so the other tracks get cut...
            continue 
 
         # Get index and clip
@@ -169,6 +160,27 @@ def cut_pressed():
    
     updater.repaint_tline()
 
+def cut_all_pressed():
+    # Disable cut action when it clashes with ongoing edits
+    if _can_do_cut() == False:
+        return
+        
+    tline_frame = PLAYER().current_frame()
+    movemodes.clear_selected_clips()
+    cutmode.cut_all_tracks(tline_frame)
+    
+def _can_do_cut():
+    if EDIT_MODE() == editorstate.ONE_ROLL_TRIM or EDIT_MODE() == editorstate.TWO_ROLL_TRIM or EDIT_MODE() == editorstate.SLIDE_TRIM:
+        return False
+    if EDIT_MODE() == editorstate.MULTI_MOVE and multimovemode.edit_data != None:
+        return False
+    if EDIT_MODE() == editorstate.MULTI_MOVE and multimovemode.edit_data != None:
+        return False
+    if boxmove.box_selection_data != None:
+        return False
+    
+    return True
+        
 def sequence_split_pressed():
     """
     Intention of this method is to split a sequence at the current position,
@@ -375,7 +387,7 @@ def splice_out_button_pressed():
     
     track = get_track(movemodes.selected_track)
 
-    if editevent.track_lock_check_and_user_info(track, splice_out_button_pressed, "splice out"):
+    if dialogutils.track_lock_check_and_user_info(track):
         movemodes.clear_selection_values()
         return
 
@@ -487,7 +499,7 @@ def lift_button_pressed():
                          
     track = get_track(movemodes.selected_track)
 
-    if editevent.track_lock_check_and_user_info(track, lift_button_pressed, "lift"):
+    if dialogutils.track_lock_check_and_user_info(track):
         movemodes.clear_selection_values()
         return
 
@@ -505,11 +517,47 @@ def lift_button_pressed():
 
 def ripple_delete_button_pressed():
     print "Ripple delete"
+    if movemodes.selected_track == -1:
+        return
 
+    track = get_track(movemodes.selected_track)
+    
+    delete_range_in = track.clip_start(movemodes.selected_range_in)
+    out_clip = track.clips[movemodes.selected_range_out]
+    delete_range_out = track.clip_start(movemodes.selected_range_out) + out_clip.clip_out - out_clip.clip_in + 1 # +1 out incl
+    delete_range_length = delete_range_out - delete_range_in
+    
+    ripple_data = multimovemode.MultimoveData(track, delete_range_out, True, False)
+    ripple_data.build_ripple_data(track.id, delete_range_length, movemodes.selected_range_in)
+    available_from_range_out = ripple_data.max_backwards
+
+    ripple_data = multimovemode.MultimoveData(track, delete_range_in, True, False)
+    ripple_data.build_ripple_data(track.id, delete_range_length, movemodes.selected_range_in)
+    available_from_range_in = ripple_data.max_backwards
+
+    if available_from_range_in < delete_range_length or available_from_range_out < delete_range_length:
+        overwrite_track = ripple_data.get_overwrite_data(delete_range_length)
+        primary_txt = _("Can't do Ripple Delete!")
+        secondary_txt = _("Seleted Ripple Delete would cause an overwrite and that is not permitted for this edit action.\n\nOverwrite would happen on at track <b>") + utils.get_track_name(overwrite_track, current_sequence()) + "</b>."
+        parent_window = gui.editor_window.window
+        dialogutils.info_message(primary_txt, secondary_txt, parent_window)
+        return 
+
+    # Do ripple delete
+    data = {"track":track,
+            "from_index":movemodes.selected_range_in,
+            "to_index":movemodes.selected_range_out,
+            "multi_data":ripple_data,
+            "edit_delta":-delete_range_length}
+    edit_action = edit.ripple_delete_action(data)
+    edit_action.do_edit()
+    
+    _splice_out_done_update()
+    
 def insert_button_pressed():
     track = current_sequence().get_first_active_track()
 
-    if editevent.track_lock_check_and_user_info(track, insert_button_pressed, "insert"):
+    if dialogutils.track_lock_check_and_user_info(track):
         return
 
     tline_pos =_current_tline_frame()
@@ -525,7 +573,7 @@ def insert_button_pressed():
 def append_button_pressed():
     track = current_sequence().get_first_active_track()
 
-    if editevent.track_lock_check_and_user_info(track, append_button_pressed, "insert"):
+    if dialogutils.track_lock_check_and_user_info(track):
         return
 
     tline_pos = track.get_length()
@@ -548,7 +596,7 @@ def three_point_overwrite_pressed():
 
     # Get data
     track = get_track(movemodes.selected_track)
-    if editevent.track_lock_check_and_user_info(track, three_point_overwrite_pressed, "3 point overwrite"):
+    if dialogutils.track_lock_check_and_user_info(track):
         return
     
     range_start_frame = track.clip_start(movemodes.selected_range_in)
@@ -593,7 +641,7 @@ def three_point_overwrite_pressed():
 def range_overwrite_pressed():
     # Get data
     track = current_sequence().get_first_active_track()
-    if editevent.track_lock_check_and_user_info(track, range_overwrite_pressed, "range overwrite"):
+    if dialogutils.track_lock_check_and_user_info(track):
         return
 
     # Get over clip and check it overwrite range area

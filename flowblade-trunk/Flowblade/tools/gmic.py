@@ -98,7 +98,7 @@ _hamburger_menu = Gtk.Menu()
 
 #-------------------------------------------------- launch and inits
 def test_availablity():
-    if os.path.exists("/usr/bin/gmic") == True:
+    if os.path.exists("/usr/bin/gmic") == True or os.path.exists("/app/bin/gmic") == True: # File system and flatpak
         print "G'MIC found"
         global _gmic_found
         _gmic_found = True
@@ -212,12 +212,10 @@ def main(root_path, force_launch=False):
 
     # Themes
     if editorpersistance.prefs.theme != appconsts.LIGHT_THEME:
+        respaths.apply_dark_theme()
         Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", True)
         if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
             gui.apply_gtk_css()
-            
-    # Request dark them if so desired
-
 
     repo = mlt.Factory().init()
 

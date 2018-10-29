@@ -19,8 +19,6 @@
 """
 
 """
-Handles or passes on mouse edit events from timeline.
-
 Handles edit mode setting.
 """
 
@@ -31,6 +29,7 @@ from editorstate import PLAYER
 from editorstate import EDIT_MODE
 import editorpersistance
 import gui
+import kftoolmode
 import movemodes
 import tlinewidgets
 import trimmodes
@@ -43,9 +42,6 @@ def set_default_edit_mode(disable_mouse=False):
     This is used as global 'go to start position' exit door from
     situations where for example user is in trim and exits it
     without specifying which edit mode to go to.
-    
-    NOTE: As this uses 'programmed click', this method does nothing if insert mode button
-    is already down.
     """
     gui.editor_window.set_default_edit_tool()
     if disable_mouse:
@@ -121,7 +117,8 @@ def box_mode_pressed():
     editorstate.edit_mode = editorstate.OVERWRITE_MOVE
     editorstate.overwrite_mode_box = True
     boxmove.clear_data()
-        
+    boxmove.entered_from_overwrite = False
+            
     tlinewidgets.set_edit_mode(None, None) # these get set later for box move
         
     _set_move_mode()
@@ -321,6 +318,15 @@ def slide_trim_mode_init(x, y):
     success = trimmodes.set_slide_mode(track, press_frame)
     return success
 
+
+# -------------------------------------- multi trim mode
+def multitrim_mode_pressed():
+    stop_looping()
+    editorstate.edit_mode = editorstate.MULTI_TRIM
+    tlinewidgets.set_edit_mode(None, None) # No overlays are drawn in this edit mode
+    movemodes.clear_selected_clips() # Entering trim edit mode clears selection 
+    updater.set_trim_mode_gui()
+    
 # -------------------------------------- cut mode
 def cut_mode_pressed():
     #print "cut_mode_pressed"
@@ -335,14 +341,27 @@ def cut_mode_pressed():
     
     #_set_move_mode()
 
-# -------------------------------------- cut mode
+# -------------------------------------- kftool mode
 def kftool_mode_pressed():
-    print "kftool_mode_pressed"
     stop_looping()
     current_sequence().clear_hidden_track()
 
     # Box tool is implemeted as sub mode of OVERWRITE_MOVE
     editorstate.edit_mode = editorstate.KF_TOOL
-        
+    kftoolmode.enter_mode = None
+    
     tlinewidgets.set_edit_mode(None, tlinewidgets.draw_kftool_overlay)
     movemodes.clear_selected_clips() # Entering trim edit mode clears selection 
+
+def kftool_mode_from_popup_menu(clip, track, edit_type):
+    stop_looping()
+    current_sequence().clear_hidden_track()
+
+    kftoolmode.enter_mode = editorstate.edit_mode 
+    editorstate.edit_mode = editorstate.KF_TOOL
+        
+    tlinewidgets.set_edit_mode(None, tlinewidgets.draw_kftool_overlay)
+    movemodes.clear_selected_clips() # Entering this edit mode clears selection 
+
+    kftoolmode.init_tool_for_clip(clip, track, edit_type)
+    gui.editor_window.set_cursor_to_mode()
