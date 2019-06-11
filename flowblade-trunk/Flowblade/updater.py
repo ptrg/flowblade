@@ -21,7 +21,9 @@
 """
 Module contains GUI update routines.
 """
+import time
 
+from gi.repository import GObject
 from gi.repository import Gtk
 from gi.repository import Gdk
 
@@ -122,21 +124,21 @@ def refresh_player(e):
 
 # --------------------------------- window 
 def window_resized():
-    # This can get async called from window "size-allocate" signal 
-    # during project load before project.c_seq has been build
-    if not(hasattr(editorstate.project, "c_seq")):
-        return
-    if editorstate.project.c_seq == None:
-        return
+    try:
+        # Resize track heights so that all tracks are displayed
+        current_sequence().resize_tracks_to_fit(gui.tline_canvas.widget.get_allocation())
+        
+        # Place clips in the middle of timeline canvas after window resize
+        tlinewidgets.set_ref_line_y(gui.tline_canvas.widget.get_allocation())
 
-    # Resize track heights so that all tracks are displayed
-    current_sequence().resize_tracks_to_fit(gui.tline_canvas.widget.get_allocation())
-    
-    # Place clips in the middle of timeline canvas after window resize
-    tlinewidgets.set_ref_line_y(gui.tline_canvas.widget.get_allocation())
+        gui.tline_column.init_listeners() # hit areas for track switches need to be recalculated
+        repaint_tline()
 
-    gui.tline_column.init_listeners() # hit areas for track switches need to be recalculated
-    repaint_tline()
+        return False
+    except:
+        GObject.timeout_add(200, window_resized)
+        print "window resized FAILED"
+        return False
 
 # --------------------------------- timeline
 # --- REPAINT
@@ -145,6 +147,7 @@ def repaint_tline():
     Repaints timeline canvas and scale
     """
     gui.tline_canvas.widget.queue_draw()
+    gui.tline_column.widget.queue_draw()
     gui.tline_scale.widget.queue_draw()
 
 # --- SCROLL AND LENGTH EVENTS
@@ -439,13 +442,7 @@ def display_sequence_in_monitor():
     """
     if PLAYER() == None: # this method gets called too early when initializing, hack fix.
         return
-    
-    # If this gets called without user having pressed 'Timeline' button we'll 
-    # programmatically press it to recall this method to have the correct button down.
-    #if gui.sequence_editor_b.get_active() == False:
-    #    gui.sequence_editor_b.set_active(True)
-    #    return
-        
+           
     editorstate._timeline_displayed = True
 
     # Clear hidden track that has been displaying monitor clip
@@ -535,10 +532,10 @@ def set_and_display_monitor_media_file(media_file):
     """
     editorstate._monitor_media_file = media_file
     
-    if editorstate.timeline_visible() == True: # This was changed
-        display_clip_in_monitor(clip_monitor_currently_active = True)
-    else:
+    if editorstate.timeline_visible() == True:
         display_clip_in_monitor()
+    else:
+        display_clip_in_monitor(clip_monitor_currently_active = True)
 
 
 # --------------------------------------- frame displayes

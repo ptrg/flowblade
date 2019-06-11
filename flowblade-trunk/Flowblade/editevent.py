@@ -228,6 +228,7 @@ def tline_canvas_mouse_pressed(event, frame):
     """
     Mouse event callback from timeline canvas widget
     """
+    editorstate.timeline_mouse_disabled = False # This is used to disable "move and "release" events when they would get bad data.
     
     if PLAYER().looping():
         return
@@ -334,50 +335,27 @@ def tline_canvas_mouse_pressed(event, frame):
             trimmodes.set_no_edit_trim_mode()
             PLAYER().seek_frame(frame)
         return
-    # LEFT BUTTON + CTRL: Select new trimmed clip in one roll trim mode
-    # This is not that relevant anymore with context sensitive cursor, look to remove, but we still hit this
-    elif ((event.button == 1 
-          and (event.get_state() & Gdk.ModifierType.CONTROL_MASK)
-          and EDIT_MODE() == editorstate.ONE_ROLL_TRIM) or 
-        (event.button == 1 and editorstate.cursor_is_tline_sensitive == True and EDIT_MODE() == editorstate.ONE_ROLL_TRIM)):
-        track = tlinewidgets.get_track(event.y)
-        if track == None:
-            if editorpersistance.prefs.empty_click_exits_trims == True:
-                modesetting.set_default_edit_mode(True)
-            return
-        success = trimmodes.set_oneroll_mode(track, frame)
-        if (not success) and editorpersistance.prefs.empty_click_exits_trims == True:
-            modesetting.set_default_edit_mode(True)
-            return
-            
-        if trimmodes.edit_data["to_side_being_edited"] == True:
-            pointer_context = appconsts.POINTER_CONTEXT_TRIM_LEFT
-        else:
-            pointer_context = appconsts.POINTER_CONTEXT_TRIM_RIGHT
-        gui.editor_window.set_tline_cursor_to_context(pointer_context)
-        gui.editor_window.set_tool_selector_to_mode()
-        if not editorpersistance.prefs.quick_enter_trims:
-            editorstate.timeline_mouse_disabled = True
-        else:
+    # LEFT BUTTON: Select new trimmed clip in active one roll trim mode	with sensitive cursor.
+    elif (event.button == 1 and EDIT_MODE() == editorstate.ONE_ROLL_TRIM):	
+        track = tlinewidgets.get_track(event.y)	
+        if track == None:	
+            modesetting.set_default_edit_mode(True)	
+            return	
+        success = trimmodes.set_oneroll_mode(track, frame)	
+        if not success:
+            modesetting.set_default_edit_mode(True)	
+            return	
+            	
+        if trimmodes.edit_data["to_side_being_edited"] == True:	
+            pointer_context = appconsts.POINTER_CONTEXT_TRIM_LEFT	
+        else:	
+            pointer_context = appconsts.POINTER_CONTEXT_TRIM_RIGHT	
+        gui.editor_window.set_tline_cursor_to_context(pointer_context)	
+        gui.editor_window.set_tool_selector_to_mode()	
+        if not editorpersistance.prefs.quick_enter_trims:	
+            editorstate.timeline_mouse_disabled = True	
+        else:	
             trimmodes.oneroll_trim_move(event.x, event.y, frame, None)
-    # LEFT BUTTON + CTRL: Select new trimmed clip in two roll trim mode
-    # This is not that relevant anymore with context sensitive cursor, look to remove.
-    elif (event.button == 1 
-          and (event.get_state() & Gdk.ModifierType.CONTROL_MASK)
-          and EDIT_MODE() == editorstate.TWO_ROLL_TRIM):
-        track = tlinewidgets.get_track(event.y)
-        if track == None:
-            if editorpersistance.prefs.empty_click_exits_trims == True:
-                modesetting.set_default_edit_mode(True)
-            return
-        success = trimmodes.set_tworoll_mode(track, frame)
-        if (not success) and  editorpersistance.prefs.empty_click_exits_trims == True:
-            modesetting.set_default_edit_mode(True)
-            return
-        if not editorpersistance.prefs.quick_enter_trims:
-            editorstate.timeline_mouse_disabled = True
-        else:
-            trimmodes.tworoll_trim_move(event.x, event.y, frame, None)
     elif event.button == 2:
         updater.zoom_project_length()
     # LEFT BUTTON: Handle left mouse button edits by passing event to current edit mode
@@ -500,8 +478,10 @@ def tline_media_drop(media_file, x, y, use_marks=False):
         #modesetting.set_default_edit_mode()
         # TODO: Info
         return
-        
+
     modesetting.stop_looping()
+    if EDIT_MODE() == editorstate.KF_TOOL:
+        kftoolmode.exit_tool()
 
     frame = tlinewidgets.get_frame(x)
     
@@ -510,7 +490,7 @@ def tline_media_drop(media_file, x, y, use_marks=False):
         new_clip = current_sequence().create_file_producer_clip(media_file.path, media_file.name, False, media_file.ttl)
     else:
         new_clip = current_sequence().create_pattern_producer(media_file)
-
+            
     # Set clip in and out
     if use_marks == False:
         new_clip.mark_in = 0
@@ -519,8 +499,22 @@ def tline_media_drop(media_file, x, y, use_marks=False):
         if media_file.type == appconsts.IMAGE_SEQUENCE:
             new_clip.mark_out = media_file.length
     else:
-        new_clip.mark_in = media_file.mark_in
-        new_clip.mark_out =  media_file.mark_out
+        if new_clip.media_type == appconsts.IMAGE or new_clip.media_type == appconsts.PATTERN_PRODUCER:
+            # Give IMAGE and PATTERN_PRODUCER media types default mark in and mark out if not already set.
+            # This makes them reasonably short and trimmable in both directions.
+            # NOTE: WE SHOULD BE DOING THIS AT CREATION TIME, WE'RE DOING THE SAME THING IN updater.display_clip_in_monitor() ?
+            #       ...but then we would need to patch persistance.py...maybe keep this even if not too smart.
+            # TODO: Make default length user settable or use graphics value
+            if (hasattr(new_clip, 'mark_in') == False) or (new_clip.mark_in == -1 and new_clip.mark_out == -1):
+                center_frame = new_clip.get_length() / 2
+                default_length_half = 75
+                mark_in = center_frame - default_length_half
+                mark_out = center_frame + default_length_half - 1
+                new_clip.mark_in = mark_in
+                new_clip.mark_out = mark_out
+        else: # All the rest
+            new_clip.mark_in = media_file.mark_in
+            new_clip.mark_out = media_file.mark_out
 
         if new_clip.mark_in == -1:
             new_clip.mark_in = 0

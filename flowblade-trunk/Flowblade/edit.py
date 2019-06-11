@@ -337,7 +337,7 @@ class EditAction:
     def undo(self):
         PLAYER().stop_playback()
 
-        # HACK, see above.
+        # HACK, see above in __init()__
         if self.stop_for_edit:
             PLAYER().consumer.stop()
 
@@ -364,7 +364,7 @@ class EditAction:
     def redo(self):
         PLAYER().stop_playback()
 
-        # HACK, see above.
+        # HACK, see above in __init()__
         if self.stop_for_edit:
             PLAYER().consumer.stop()
 
@@ -1554,7 +1554,6 @@ def _trim_end_redo(self):
 def trim_last_clip_end_action(data): 
     action = EditAction(_trim_last_clip_end_undo,_trim_last_clip_end_redo, data)
     action.exit_active_trimmode_on_edit = False
-    action.update_hidden_track_blank = False
     return action
 
 def _trim_last_clip_end_undo(self):

@@ -66,6 +66,7 @@ import respaths
 import sequence
 import syncsplitevent
 import updater
+import userfolders
 import utils
 
 
@@ -658,7 +659,7 @@ def range_overwrite_pressed():
     if mark_in_frame != -1 and mark_out_frame != -1:
         range_length = mark_out_frame - mark_in_frame + 1 # end is incl.
         if over_clip.mark_in == -1:
-            # This actually never hit because mark in and mark out seem to first and last frame if nothing set
+            # This actually should never be hit because mark in and mark out seem to first and last frame if nothing set
             show_three_point_edit_not_defined()
             return
 
@@ -926,14 +927,6 @@ def add_transition_pressed(retry_from_render_folder_select=False):
         _no_audio_tracks_mixing_info()
         return
 
-    if editorpersistance.prefs.render_folder == None:
-        if retry_from_render_folder_select == True:
-            return
-        dialogs.select_rendred_clips_dir(_add_transition_render_folder_select_callback,
-                                         gui.editor_window.window,
-                                         editorpersistance.prefs.render_folder)
-        return
-
     if clip_count == 2:
         _do_rendered_transition(track)
     else:
@@ -980,22 +973,6 @@ def get_transition_data_for_clips(track, from_clip, to_clip):
                        "to_handle":to_handle,
                        "max_length":max_length}
     return transition_data
-
-def _add_transition_render_folder_select_callback(dialog, response_id, file_select):
-    try:
-        folder = file_select.get_filenames()[0]
-    except:
-        dialog.destroy()
-        return
-
-    dialog.destroy()
-    if response_id == Gtk.ResponseType.YES:
-        if folder ==  os.path.expanduser("~"):
-            dialogs.rendered_clips_no_home_folder_dialog()
-        else:
-            editorpersistance.prefs.render_folder = folder
-            editorpersistance.save()
-            add_transition_pressed(True)
 
 def _add_transition_dialog_callback(dialog, response_id, selection_widgets, transition_data):
     if response_id != Gtk.ResponseType.ACCEPT:
@@ -1534,7 +1511,7 @@ class ReRenderderAllWindow:
         self.rerender_list = rerender_list
         self.rendered_items = []
         self.encoding_selections = encoding_selections
-        self.dialog = Gtk.Dialog("Rerender all Rendered Transitions / Fades",
+        self.dialog = Gtk.Dialog(_("Rerender all Rendered Transitions / Fades").encode('utf-8'),
                          gui.editor_window.window,
                          Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
                          (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT))
@@ -1589,7 +1566,7 @@ class ReRenderderAllWindow:
 
         # Dreate render consumer
         profile = PROJECT().profile
-        folder = editorpersistance.prefs.render_folder
+        folder = userfolders.get_render_dir()
         file_name = md5.new(str(os.urandom(32))).hexdigest()
         self.write_file = folder + "/"+ file_name + file_ext
         consumer = renderconsumer.get_render_consumer_for_encoding_and_quality(self.write_file, profile, encoding_option_index, quality_option_index)

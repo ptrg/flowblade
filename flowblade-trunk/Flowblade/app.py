@@ -73,9 +73,11 @@ import mltprofiles
 import mlttransitions
 import modesetting
 import movemodes
+import multitrimmode
 import persistance
 import positionbar
 import preferenceswindow
+import processutils
 import projectaction
 import projectdata
 import projectinfogui
@@ -85,6 +87,7 @@ import render
 import renderconsumer
 import respaths
 import resync
+import rotomask
 import sequence
 import shortcuts
 import snapping
@@ -92,11 +95,11 @@ import threading
 import titler
 import tlinewidgets
 import toolsintegration
-import toolnatron
 import trimmodes
 import translations
 import undo
 import updater
+import userfolders
 import utils
 import workflow
 
@@ -115,6 +118,7 @@ splash_timeout_id = -1
 exit_timeout_id = -1
 window_resize_id = -1
 window_state_id = -1
+resize_timeout_id = -1
 
 _log_file = None
 
@@ -129,7 +133,9 @@ def main(root_path):
     # DEBUG: Direct output to log file if log file set
     if _log_file != None:
         log_print_output_to_file()
-    
+
+    print "Application version: " + editorstate.appversion
+
     # Print OS, Python version and GTK+ version
     try:
         os_release_file = open("/etc/os-release","r")
@@ -150,40 +156,9 @@ def main(root_path):
     except:
         editorstate.mlt_version = "0.0.99" # magic string for "not found"
 
-    #print "SDL version:", str(editorstate.get_sdl_version())
-    
-    # passing -xdg as a flag will change the user_dir location with XDG_CONFIG_HOME
-    # For full xdg-app support all the launch processes need to add this too, currently not impl.
+    # Create user folders if need and determine if were using xdg or dotfile userf folders.
+    userfolders.init()
 
-    for arg in sys.argv:
-        if arg.lower() == "-xdg":
-            editorstate.use_xdg = True
-
-    # Create hidden folders if not present
-    user_dir = utils.get_hidden_user_dir_path()
-
-    print "User dir:",user_dir
-    if not os.path.exists(user_dir):
-        os.mkdir(user_dir)
-    if not os.path.exists(user_dir + mltprofiles.USER_PROFILES_DIR):
-        os.mkdir(user_dir + mltprofiles.USER_PROFILES_DIR)
-    if not os.path.exists(user_dir + AUTOSAVE_DIR):
-        os.mkdir(user_dir + AUTOSAVE_DIR)
-    if not os.path.exists(user_dir + BATCH_DIR):
-        os.mkdir(user_dir + BATCH_DIR)
-    if not os.path.exists(user_dir + appconsts.AUDIO_LEVELS_DIR):
-        os.mkdir(user_dir + appconsts.AUDIO_LEVELS_DIR)
-    if not os.path.exists(utils.get_hidden_screenshot_dir_path()):
-        os.mkdir(utils.get_hidden_screenshot_dir_path())
-    if not os.path.exists(user_dir + appconsts.GMIC_DIR):
-        os.mkdir(user_dir + appconsts.GMIC_DIR)
-    if not os.path.exists(user_dir + appconsts.MATCH_FRAME_DIR):
-        os.mkdir(user_dir + appconsts.MATCH_FRAME_DIR)
-    if not os.path.exists(user_dir + appconsts.TRIM_VIEW_DIR):
-        os.mkdir(user_dir + appconsts.TRIM_VIEW_DIR)
-    if not os.path.exists(user_dir + appconsts.NATRON_DIR):
-        os.mkdir(user_dir + appconsts.NATRON_DIR)
-       
     # Set paths.
     respaths.set_paths(root_path)
 
@@ -193,8 +168,6 @@ def main(root_path):
         respaths.apply_dark_theme()
     if editorpersistance.prefs.display_all_audio_levels == False:
         editorstate.display_all_audio_levels = False
-    editorpersistance.create_thumbs_folder_if_needed(user_dir)
-    editorpersistance.create_rendered_clips_folder_if_needed(user_dir)
 
     editorpersistance.save()
 
@@ -219,10 +192,14 @@ def main(root_path):
     Gdk.threads_enter()
 
     # Themes
+    if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
+        success = gui.apply_gtk_css()
+        if not success:
+            editorpersistance.prefs.theme = appconsts.LIGHT_THEME
+            editorpersistance.save()
+
     if editorpersistance.prefs.theme != appconsts.LIGHT_THEME:
         Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", True)
-        if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
-            gui.apply_gtk_css()
         
     # Load drag'n'drop images
     dnd.init()
@@ -233,7 +210,7 @@ def main(root_path):
     editorstate.SCREEN_WIDTH = scr_w
     editorstate.SCREEN_HEIGHT = scr_h
 
-    print scr_w, scr_h
+    print "Screen size:", scr_w, "x", scr_h
     print "Small height:", editorstate.screen_size_small_height()
     print "Small width:",  editorstate.screen_size_small_width()
 
@@ -250,9 +227,7 @@ def main(root_path):
 
     # Init MLT framework
     repo = mlt.Factory().init()
-    repo.producers().set('qimage', None, 0)
-    repo.producers().set('qtext', None, 0)
-    repo.producers().set('kdenlivetitle', None, 0)
+    processutils.prepare_mlt_repo(repo)
 
     # Set numeric locale to use "." as radix, MLT initilizes this to OS locale and this causes bugs.
     locale.setlocale(locale.LC_NUMERIC, 'C')
@@ -288,10 +263,8 @@ def main(root_path):
 
     # Check for tools and init tools integration.
     gmic.test_availablity()
-    toolnatron.init()
     toolsintegration.init()
-    #toolsintegration.test()
-    
+
     # Create player object.
     create_player()
 
@@ -319,8 +292,8 @@ def main(root_path):
     # Get existing autosave files
     autosave_files = get_autosave_files()
 
-    # Clear splash
-    if ((editorpersistance.prefs.display_splash_screen == True) and len(autosave_files) == 0):
+    # Show splash
+    if ((editorpersistance.prefs.display_splash_screen == True) and len(autosave_files) == 0) and not editorstate.runtime_version_greater_then_test_version(editorpersistance.prefs.workflow_dialog_last_version_shown, editorstate.appversion):
         global splash_timeout_id
         splash_timeout_id = GLib.timeout_add(2600, destroy_splash_screen)
         splash_screen.show_all()
@@ -350,20 +323,30 @@ def main(root_path):
             global assoc_timeout_id
             assoc_timeout_id = GObject.timeout_add(10, open_assoc_file)
 
-
-
+    if editorpersistance.prefs.theme == appconsts.FLOWBLADE_THEME:
+        gui.apply_flowblade_theme_fixes()
+        
     # SDL 2 consumer needs to created after Gtk.main() has run enough for window to be visble
     #if editorstate.get_sdl_version() == editorstate.SDL_2: # needs more state considerion still
     #    print "SDL2 timeout launch"
     #    global sdl2_timeout_id
     #    sdl2_timeout_id = GObject.timeout_add(1500, create_sdl_2_consumer)
     
-    # In PositionNumericalEntries we are using Gtk.Entry objects in a way that works us nicely, but is somehow "error" for Gtk, so we just kill this.
+    # In PositionNumericalEntries we are using Gtk.Entry objects in a way that works for us nicely, but is somehow "error" for Gtk, so we just kill this.
     Gtk.Settings.get_default().set_property("gtk-error-bell", False)
     
-    # Show first run worflow info dialog.
-    #GObject.timeout_add(500, show_worflow_info_dialog)
-                
+    # Show first run worflow info dialog if not shown for this version of application.
+    if editorstate.runtime_version_greater_then_test_version(editorpersistance.prefs.workflow_dialog_last_version_shown, editorstate.appversion):
+        GObject.timeout_add(500, show_worflow_info_dialog)
+        
+    # Handle userfolders init error and data copy.
+    if userfolders.get_init_error() != None:
+        GObject.timeout_add(500, show_user_folders_init_error_dialog, userfolders.get_init_error())
+    elif userfolders.data_copy_needed():
+        GObject.timeout_add(500, show_user_folders_copy_dialog)
+    else:
+        print "No user folders actions needed."
+    
     # Launch gtk+ main loop
     Gtk.main()
 
@@ -371,9 +354,6 @@ def main(root_path):
 
 # ----------------------------------- callback setting
 def monkeypatch_callbacks():
-    # Prefences setting
-    preferenceswindow.select_thumbnail_dir_callback = projectaction.select_thumbnail_dir_callback
-    preferenceswindow.select_render_clips_dir_callback = projectaction.select_render_clips_dir_callback
 
     # We need to do this on app start-up or
     # we'll get circular imports with projectaction->mltplayer->render->projectaction
@@ -406,6 +386,9 @@ def monkeypatch_callbacks():
     # Callback to reinit to change slider <-> kf editor
     propertyeditorbuilder.re_init_editors_for_slider_type_change_func = clipeffectseditor.effect_selection_changed
 
+    propertyeditorbuilder.show_rotomask_func = rotomask.show_rotomask
+    
+    multitrimmode.set_default_mode_func = modesetting.set_default_edit_mode
     # These provide clues for further module refactoring 
 
 # ---------------------------------- SDL2 consumer
@@ -634,10 +617,7 @@ def open_project(new_project):
     editorstate.transition_length = -1
     editorstate.clear_trim_clip_cache()
     audiomonitoring.init_for_project_load()
-    updater.window_resized()
 
-    gui.editor_window.window.handler_unblock(window_resize_id)
-    gui.editor_window.window.handler_unblock(window_state_id)
     start_autosave()
 
     if new_project.update_media_lengths_on_load == True:
@@ -647,7 +627,20 @@ def open_project(new_project):
     editorstate.trim_mode_ripple = False
 
     updater.set_timeline_height()
-        
+
+    gui.editor_window.window.handler_unblock(window_resize_id)
+    gui.editor_window.window.handler_unblock(window_state_id)
+
+    global resize_timeout_id
+    resize_timeout_id = GLib.timeout_add(500, _do_window_resized_update)
+
+    # Set scrubbing
+    editorstate.player.set_scrubbing(editorpersistance.prefs.audio_scrubbing)
+    
+def _do_window_resized_update():
+    GObject.source_remove(resize_timeout_id)
+    updater.window_resized()
+    
 def change_current_sequence(index):
     stop_autosave()
     editorstate.project.c_seq = editorstate.project.sequences[index]
@@ -669,6 +662,7 @@ def change_current_sequence(index):
     selection = gui.sequence_list_view.treeview.get_selection()
     selected_index = editorstate.project.sequences.index(editorstate.current_sequence())
     selection.select_path(str(selected_index))
+
     start_autosave()
 
     updater.set_timeline_height()
@@ -693,7 +687,7 @@ def autosave_recovery_dialog():
 
 def autosave_dialog_callback(dialog, response):
     dialog.destroy()
-    autosave_file = utils.get_hidden_user_dir_path() + AUTOSAVE_DIR + get_autosave_files()[0]
+    autosave_file = userfolders.get_cache_dir() + AUTOSAVE_DIR + get_autosave_files()[0]
     if response == Gtk.ResponseType.OK:
         global loaded_autosave_file
         loaded_autosave_file = autosave_file
@@ -707,7 +701,7 @@ def autosaves_many_recovery_dialog():
     now = time.time()
     autosaves = []
     for a_file_name in autosaves_file_names:
-        autosave_path = utils.get_hidden_user_dir_path() + AUTOSAVE_DIR + a_file_name
+        autosave_path = userfolders.get_cache_dir() + AUTOSAVE_DIR + a_file_name
         autosave_object = utils.EmptyClass()
         autosave_object.age = now - os.stat(autosave_path).st_mtime
         autosave_object.path = autosave_path
@@ -743,11 +737,11 @@ def start_autosave():
 
     print "Autosave started..."
     autosave_timeout_id = GObject.timeout_add(autosave_delay_millis, do_autosave)
-    autosave_file = utils.get_hidden_user_dir_path() + get_instance_autosave_file()
+    autosave_file = userfolders.get_cache_dir() + get_instance_autosave_file()
     persistance.save_project(editorstate.PROJECT(), autosave_file)
 
 def get_autosave_files():
-    autosave_dir = utils.get_hidden_user_dir_path() + AUTOSAVE_DIR
+    autosave_dir = userfolders.get_cache_dir() + AUTOSAVE_DIR
     return os.listdir(autosave_dir)
 
 def stop_autosave():
@@ -758,7 +752,7 @@ def stop_autosave():
     autosave_timeout_id = -1
 
 def do_autosave():
-    autosave_file = utils.get_hidden_user_dir_path() + get_instance_autosave_file()
+    autosave_file = userfolders.get_cache_dir() + get_instance_autosave_file()
     persistance.save_project(editorstate.PROJECT(), autosave_file)
     return True
 
@@ -784,11 +778,30 @@ def destroy_splash_screen():
     splash_screen.destroy()
     GObject.source_remove(splash_timeout_id)
 
-
 def show_worflow_info_dialog():
+    editorpersistance.prefs.workflow_dialog_last_version_shown = editorstate.appversion
+    editorpersistance.save()
+    
     worflow_info_dialog = workflow.WorkflowDialog()
     return False
-    
+
+# ------------------------------------------------------- userfolders dialogs
+def show_user_folders_init_error_dialog(error_msg):
+    # not done
+    print error_msg, " user folder XDG init error"
+    return False
+
+def show_user_folders_copy_dialog():
+    dialog = dialogs.xdg_copy_dialog()
+    copy_thread = userfolders.XDGCopyThread(dialog, _xdg_copy_completed_callback)
+    copy_thread.start()
+    return False
+
+def _xdg_copy_completed_callback(dialog):
+    Gdk.threads_enter()
+    dialog.destroy()
+    Gdk.threads_leave()
+
 # ------------------------------------------------------- small screens
 def _set_draw_params():
     if editorstate.screen_size_small_width() == True:
@@ -922,7 +935,7 @@ def _app_destroy():
         pass
     # Delete autosave file
     try:
-        os.remove(utils.get_hidden_user_dir_path() + get_instance_autosave_file())
+        os.remove(userfolders.get_cache_dir() + get_instance_autosave_file())
     except:
         print "Delete autosave file FAILED"
 

@@ -30,6 +30,7 @@ import tlinewidgets
 import trimmodes
 import updater
 
+set_default_mode_func = None
 
 _mouse_edit_context = appconsts.POINTER_CONTEXT_NONE
 
@@ -37,6 +38,8 @@ _mouse_edit_context = appconsts.POINTER_CONTEXT_NONE
 # --------------------------------------------- mouse events
 def mouse_press(event, frame):
     _enter_trim_mode_edit(event.x, event.y, frame)
+    if _mouse_edit_context == appconsts.POINTER_CONTEXT_NONE:
+        set_default_mode_func()
 
 def mouse_move(x, y, frame, state):
     # If _mouse_edit_context == appconsts.POINTER_CONTEXT_NONE we don't need to do anything and mouse events for all other contexts are handled in trimmodes.py
@@ -68,7 +71,7 @@ def _enter_trim_mode_edit(x, y, frame):
         
     trimmodes.edit_complete_callback = _edit_completed
         
-    if _mouse_edit_context == appconsts.POINTER_CONTEXT_TRIM_LEFT or _mouse_edit_context ==  appconsts.POINTER_CONTEXT_TRIM_RIGHT:
+    if _mouse_edit_context == appconsts.POINTER_CONTEXT_TRIM_LEFT or _mouse_edit_context == appconsts.POINTER_CONTEXT_TRIM_RIGHT:
         success = modesetting.oneroll_trim_mode_init(x, y)
         if not success:
             # this should not happen (because we have pointer context) but in case we somehow do hit this, lets just get back to MULTI_TRIM mode

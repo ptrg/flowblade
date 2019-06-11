@@ -188,20 +188,23 @@ def _set_keyboard_action_names():
     _keyboard_action_names['next_frame'] = _("Next Frame")
     _keyboard_action_names['insert'] = _("Insert")
     _keyboard_action_names['append'] =  _("Append")
+    _keyboard_action_names['append_from_bin'] = _("Append Selected Media From Bin")
     _keyboard_action_names['slower'] = _("Backwards Faster")
     _keyboard_action_names['stop'] = _("Stop")
     _keyboard_action_names['faster'] =  _("Forward Faster")
     _keyboard_action_names['log_range'] = _("Log Marked Clip Range")
     _keyboard_action_names['resync'] = _("Resync selected Clip or Compositor")
     _keyboard_action_names['delete'] = _("Delete Selected Item")
+    _keyboard_action_names['lift'] = _("Lift Selected Item")
     _keyboard_action_names['to_start'] = _("Go To Start")
     _keyboard_action_names['to_end'] = _("Go To End")
     _keyboard_action_names['3_point_overwrite'] = _("3 Point Overwrite")
+    _keyboard_action_names['overwrite_range'] = _("Overwrite Range")
     _keyboard_action_names['toggle_ripple'] = _("Trim Tool Ripple Mode On/Off")
     _keyboard_action_names['cut'] = _("Cut Active Tracks")
     _keyboard_action_names['cut_all'] = _("Cut All Tracks")
     _keyboard_action_names['edit_mode_insert'] = _("Insert")
-    _keyboard_action_names['edit_mode_overwrite'] =  _("Overwrite")
+    _keyboard_action_names['edit_mode_overwrite'] = _("Overwrite")
     _keyboard_action_names['edit_mode_trim'] =  _("Trim")
     _keyboard_action_names['edit_mode_roll'] = _("Roll")
     _keyboard_action_names['edit_mode_slip'] = _("Slip")
@@ -212,13 +215,18 @@ def _set_keyboard_action_names():
     _keyboard_action_names['switch_monitor'] = _("Switch Monitor Source")
     _keyboard_action_names['add_marker'] = _("Add Mark")
     _keyboard_action_names['enter_edit'] =  _("Complete Keyboard Trim Edit")
-
-
+    _keyboard_action_names['nudge_back'] =  _("Nudge Move Selection Back 1 Frame")
+    _keyboard_action_names['nudge_forward'] =  _("Nudge Move Selection Forward 1 Frame")
+    _keyboard_action_names['nudge_back_10'] =  _("Nudge Move Selection Back 10 Frames")
+    _keyboard_action_names['nudge_forward_10'] =  _("Nudge Move Selection Forward 10 Frames")
+    _keyboard_action_names['open_next'] =  _("Open Next Media Item In Monitor")
+    
 def _set_key_names():
     global _key_names, _mod_names
     # Start with an empty slate
     _key_names = {}
     _key_names['i'] = "I"
+    _key_names['a'] = "A"
     _key_names['o'] = "O"
     _key_names['space'] = _("SPACE")
     _key_names['down'] = _("Down Arrow")
@@ -230,6 +238,7 @@ def _set_key_names():
     _key_names['j'] = "J"
     _key_names['k'] = "K"
     _key_names['l'] = "L"
+    _key_names['n'] = "N"
     _key_names['g'] = "G"
     _key_names['s'] = "S"
     _key_names['delete'] = _("Delete")
@@ -266,7 +275,9 @@ def _set_key_names():
     _key_names['return'] = _("ENTER")
     _key_names['y'] = ("Y")
     _key_names['equal'] = _("=")
-
+    _key_names['comma'] = _(",")
+    _key_names['period'] = _(".")
+    
     _mod_names["ALT"] = _("Alt")
     _mod_names["SHIFT"] =  _("Shift")
     _mod_names["ALT+SHIFT"] = _("Alt + Shift")

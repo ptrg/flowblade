@@ -144,7 +144,9 @@ class ClipKeyFrameEditor:
         self.drag_on = False # Used to stop updating pos here if pos change is initiated here.
         self.drag_min = -1
         self.drag_max = -1
-        
+
+        self.mouse_listener = None #This is special service for RotoMaskKeyFrameEditor, not used by other editors
+
         # init icons if needed
         global ACTIVE_KF_ICON, NON_ACTIVE_KF_ICON
         if ACTIVE_KF_ICON == None:
@@ -192,10 +194,6 @@ class ClipKeyFrameEditor:
         x, y, w, h = allocation
         active_width = w - 2 * END_PAD
         active_height = h - 2 * TOP_PAD      
-
-        #cr.set_source_rgb(1,0,0)
-        #cr.rectangle(0, 0, w, h)
-        #cr.fill()
         
         # Draw clip bg  
         cr.set_source_rgb(*CLIP_EDITOR_BG_COLOR)
@@ -366,6 +364,9 @@ class ClipKeyFrameEditor:
 
         self.widget.queue_draw()
         
+        if self.mouse_listener != None:
+            self.mouse_listener.mouse_pos_change_done()
+        
     def _release_event(self, event):
         """
         Mouse release callback.
@@ -387,7 +388,10 @@ class ClipKeyFrameEditor:
 
         self.widget.queue_draw()
         self.current_mouse_action = None
-        
+
+        if self.mouse_listener != None:
+            self.mouse_listener.mouse_pos_change_done()
+            
         self.drag_on = False
         
     def _legalize_x(self, x):
@@ -466,6 +470,7 @@ class ClipKeyFrameEditor:
         return False
 
     def add_keyframe(self, frame):
+        # NOTE: This makes added keyframe the active keyframe too.
         kf_index_on_frame = self.frame_has_keyframe(frame)
         if kf_index_on_frame != -1:
             # Trying add on top of existing keyframe makes it active
@@ -565,8 +570,8 @@ class ClipKeyFrameEditor:
             next_frame, val = self.keyframes[self.active_kf_index + 1]
             next_frame -= 1
         except:
-            next_frame = self.clip_length - 1
-        
+            next_frame = self.clip_in + self.clip_length
+
         frame = max(frame, prev_frame)
         frame = min(frame, next_frame)
 
@@ -668,7 +673,7 @@ class ClipEditorButtonsRow(Gtk.HBox):
         editor_parent.prev_frame_pressed()
         editor_parent.next_frame_pressed()
     """
-    def __init__(self, editor_parent):
+    def __init__(self, editor_parent, centered_buttons=False):
         GObject.GObject.__init__(self)
         self.set_homogeneous(False)
         self.set_spacing(2)
@@ -710,6 +715,8 @@ class ClipEditorButtonsRow(Gtk.HBox):
         self.kf_info_label.set_text("1/1")
         
         # Build row
+        if centered_buttons:
+            self.pack_start(Gtk.Label(), True, True, 0)
         self.pack_start(self.add_button, False, False, 0)
         self.pack_start(self.delete_button, False, False, 0)
         self.pack_start(self.prev_kf_button, False, False, 0)
@@ -720,10 +727,16 @@ class ClipEditorButtonsRow(Gtk.HBox):
         self.pack_start(self.next_frame_button, False, False, 0)
         self.pack_start(guiutils.pad_label(4,4), False, False, 0)
         self.pack_start(self.kf_info_label, False, False, 0)
-        self.pack_start(Gtk.Label(), True, True, 0)
+        if not centered_buttons:
+            self.pack_start(Gtk.Label(), True, True, 0)
+        else:
+            self.pack_start(guiutils.pad_label(4,4), False, False, 0)
         self.pack_start(self.kf_pos_label, False, False, 0)
-        self.pack_start(guiutils.get_pad_label(1, 10), False, False, 0)
-
+        if centered_buttons:
+            self.pack_start(Gtk.Label(), True, True, 0)
+        else:
+            self.pack_start(guiutils.get_pad_label(1, 10), False, False, 0)
+            
     def set_frame(self, frame):
         frame_str = utils.get_tc_string(frame)
         self.kf_pos_label.set_text(frame_str)
@@ -859,12 +872,15 @@ class AbstractKeyFrameEditor(Gtk.VBox):
         # We'll need to update some values to get keyframes on correct positions again
         self.editable_property.update_clip_index()
         self.clip_tline_pos = self.editable_property.get_clip_tline_pos()
+    
         if self.use_clip_in == True:
             self.clip_in = self.editable_property.clip.clip_in
         else:
             self.clip_in = 0
         self.clip_editor.clip_in = self.editable_property.clip.clip_in
 
+        self.clip_editor.widget.queue_draw()
+        
     def update_slider_value_display(self, frame):
         # This is called after frame changed or mouse release to update
         # slider value without causing 'changed' signal to update keyframes.
@@ -917,7 +933,9 @@ class KeyFrameEditor(AbstractKeyFrameEditor):
         orig_tline_frame = PLAYER().current_frame()
 
         self.active_keyframe_changed() # to do update gui to current values
+                                       # This also seeks tline frame to frame 0, thus value was saved in the line above
 
+        # If we do not want to seek to kf 0 or clip start we, need seek back to original tline frame
         if editorpersistance.prefs.kf_edit_init_affects_playhead == False:
             self.display_tline_frame(orig_tline_frame)
             PLAYER().seek_frame(orig_tline_frame)
@@ -991,13 +1009,7 @@ class KeyFrameEditor(AbstractKeyFrameEditor):
         self.clip_editor.active_kf_pos_entered(current_frame - 1)
         self.update_property_value()
         self.update_editor_view()
-        
-    def pos_entry_enter_hit(self, entry):
-        val = entry.get_text() #error handl?
-        self.clip_editor.active_kf_pos_entered(int(val))
-        self.update_editor_view()
-        self.update_property_value()
-    
+
     def keyframe_dragged(self, active_kf, frame):
         pass
 
@@ -1078,7 +1090,9 @@ class GeometryEditor(AbstractKeyFrameEditor):
 
         orig_tline_frame = PLAYER().current_frame()
         self.active_keyframe_changed() # to do update gui to current values
+                                       # This also seeks tline frame to frame 0, thus value was saved in the line above
 
+        # If we do not want to seek to kf 0 or clip start we, need seek back to original tline frame
         if editorpersistance.prefs.kf_edit_init_affects_playhead == False:
             self.display_tline_frame(orig_tline_frame)
             PLAYER().seek_frame(orig_tline_frame)
@@ -1305,6 +1319,184 @@ class RotatingGeometryEditor(GeometryEditor):
 
 
 
+class RotoMaskKeyFrameEditor(Gtk.VBox):
+    """
+    Class combines named value slider with ClipKeyFrameEditor and 
+    control buttons to create keyframe editor for a single keyframed
+    numerical value property. 
+    """
+    def __init__(self, editable_property, keyframe_parser):
+        GObject.GObject.__init__(self)
+        self.initializing = True # izneeded?!?
+
+        use_clip_in = True
+        
+        self.set_homogeneous(False)
+        self.set_spacing(2)
+        
+        self.editable_property = editable_property
+        self.clip_tline_pos = editable_property.get_clip_tline_pos()
+
+        self.clip_editor = ClipKeyFrameEditor(editable_property, self, use_clip_in)
+        self.clip_editor.mouse_listener = self
+        """
+        Callbacks from ClipKeyFrameEditor:
+            def clip_editor_frame_changed(self, frame)
+            def active_keyframe_changed(self)
+            def keyframe_dragged(self, active_kf, frame)
+            def update_slider_value_display(self, frame)
+        
+        Via clip_editor.mouse_listener
+            def mouse_pos_change_done(self)
+        """
+        
+        # Some filters start keyframes from *MEDIA* frame 0
+        # Some filters or compositors start keyframes from *CLIP* frame 0
+        # Filters starting from *media* 0 need offset to clip start added to all values
+        self.use_clip_in = use_clip_in
+        if self.use_clip_in == True:
+            self.clip_in = editable_property.clip.clip_in
+        else:
+            self.clip_in = 0
+    
+        self.initializing = False # Hack against too early for on slider listner
+        
+        self.clip_editor.keyframe_parser = keyframe_parser
+            
+        editable_property.value.strip('"') # This has been an issue sometimes
+         
+        self.clip_editor.set_keyframes(editable_property.value, editable_property.get_in_value)
+        clip_editor_row = Gtk.HBox(False, 0)
+        clip_editor_row.pack_start(self.clip_editor.widget, True, True, 0)
+        clip_editor_row.pack_start(guiutils.pad_label(4, 4), False, False, 0)
+        
+        self.buttons_row = ClipEditorButtonsRow(self, True)
+        
+        self.pack_start(clip_editor_row, False, False, 0)
+        self.pack_start(self.buttons_row, False, False, 0)
+
+    def set_parent_editor(self, parent):
+        # parent implements callback:
+        #      parent.update_view(timeline_frame)
+        self.parent = parent
+
+    def active_keyframe_changed(self):
+        frame = self.clip_editor.current_clip_frame
+        keyframes = self.clip_editor.keyframes
+        value = _get_frame_value(frame, keyframes)
+        self.buttons_row.set_frame(frame)
+        self.seek_tline_frame(frame)
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+
+    def update_slider_value_display(self, clip_frame):
+        # we don't have slider but this gets called from ClipKeyFrameEditor
+        pass
+    
+    def mouse_pos_change_done(self):
+        # we make ClipKeyFrameEditor call this to update parent view
+        self.parent.update_view()
+        
+    def clip_editor_frame_changed(self, clip_frame):
+        self.seek_tline_frame(clip_frame)
+        self.buttons_row.set_frame(clip_frame)
+
+    def add_pressed(self):
+        self.clip_editor.add_keyframe(self.clip_editor.current_clip_frame)
+        self.update_editor_view()
+        self.update_property_value()
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+        self.parent.update_effects_editor_value_labels()
+        
+    def delete_pressed(self):
+        self.clip_editor.delete_active_keyframe()
+        self.update_editor_view()
+        self.update_property_value()
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+        self.parent.update_effects_editor_value_labels()
+
+    def next_pressed(self):
+        self.clip_editor.set_next_active()
+        self.update_editor_view()
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+        
+    def prev_pressed(self):
+        self.clip_editor.set_prev_active()
+        self.update_editor_view()
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+        
+    def prev_frame_pressed(self):
+        self.clip_editor.move_clip_frame(-1)
+        self.update_editor_view()
+        self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
+        self.parent.update_view()
+        
+    def next_frame_pressed(self):
+        self.clip_editor.move_clip_frame(1)
+        self.update_editor_view()
+        self.parent.update_view()
+                
+    def move_kf_next_frame_pressed(self):
+        current_frame = self.clip_editor.get_active_kf_frame()
+        self.clip_editor.active_kf_pos_entered(current_frame + 1)
+        self.update_property_value()
+        self.update_editor_view()
+        self.parent.update_view()
+            
+    def move_kf_prev_frame_pressed(self):
+        current_frame = self.clip_editor.get_active_kf_frame()
+        self.clip_editor.active_kf_pos_entered(current_frame - 1)
+        self.update_property_value()
+        self.update_editor_view()
+        self.parent.update_view()
+            
+    def keyframe_dragged(self, active_kf, frame):
+        pass
+
+    def update_editor_view(self, seek_tline=True):
+        frame = self.clip_editor.current_clip_frame
+        keyframes = self.clip_editor.keyframes
+        value = _get_frame_value(frame, keyframes)
+        self.buttons_row.set_frame(frame)
+        if seek_tline == True:
+            self.seek_tline_frame(frame)
+        self.queue_draw()
+
+    def update_property_value(self):
+        self.editable_property.write_out_keyframes(self.clip_editor.keyframes)
+
+    def display_tline_frame(self, tline_frame):
+        # This is called after timeline current frame changed. 
+        # If timeline pos changed because drag is happening _here_,
+        # updating once more is wrong
+        if self.clip_editor.drag_on == True:
+            return
+
+        # update clipeditor pos
+        clip_frame = tline_frame - self.clip_tline_pos + self.clip_in
+        self.clip_editor.set_and_display_clip_frame(clip_frame)
+        self.update_editor_view(False)
+    
+    def update_clip_pos(self):
+        # This is called after position of clip has been edited.
+        # We'll need to update some values to get keyframes on correct positions again
+        self.editable_property.update_clip_index()
+        self.clip_tline_pos = self.editable_property.get_clip_tline_pos()
+        if self.use_clip_in == True:
+            self.clip_in = self.editable_property.clip.clip_in
+        else:
+            self.clip_in = 0
+        self.clip_editor.clip_in = self.editable_property.clip.clip_in
+        self.clip_editor.widget.queue_draw()
+
+    def seek_tline_frame(self, clip_frame):
+        PLAYER().seek_frame(self.clip_tline_pos + clip_frame - self.clip_in)
+    
+        
 # ----------------------------------------------------------------- POSITION NUMERICAL ENTRY WIDGET
 class PositionNumericalEntries(Gtk.HBox):
     

@@ -27,6 +27,9 @@ import copy
 import math
 import time
 
+import gi
+gi.require_version('PangoCairo', '1.0')
+
 from gi.repository import GObject
 from gi.repository import GdkPixbuf
 from gi.repository import Gtk
@@ -335,7 +338,6 @@ class ImageTextImageListView(Gtk.VBox):
         self.treeview.append_column(self.text_col_1)
         self.treeview.append_column(self.icon_col_2)
 
-        # Build widget graph and display
         self.scroll.add(self.treeview)
         self.pack_start(self.scroll, True, True, 0)
         self.scroll.show_all()
@@ -350,12 +352,15 @@ class SequenceListView(ImageTextTextListView):
     GUI component displaying list of sequences in project
     """
 
-    def __init__(self, seq_name_edited_cb, sequence_popup_cb):
+    def __init__(self, seq_name_edited_cb, sequence_popup_cb, double_click_cb):
         ImageTextTextListView.__init__(self)
         self.sequence_popup_cb = sequence_popup_cb
         self.treeview.connect('button-press-event', self._button_press_event)
         self.scroll.set_shadow_type(Gtk.ShadowType.NONE)
 
+        self.double_click_cb = double_click_cb
+        self.double_click_counter = 0 # We get 2 events for double click, we use this to only do one callback
+        
         # Icon path
         self.icon_path = respaths.IMAGE_PATH + "sequence.png"
 
@@ -387,7 +392,12 @@ class SequenceListView(ImageTextTextListView):
     def _button_press_event(self, widget, event):
         if event.button == 3:
             self.sequence_popup_cb(event)
-
+        # Double click handled separately
+        if event.button == 1 and event.type == Gdk.EventType._2BUTTON_PRESS:
+            self.double_click_counter += 1
+            if self.double_click_counter == 2:
+                self.double_click_counter = 0
+                self.double_click_cb()
 
 class MediaListView(ImageTextTextListView):
     """
@@ -473,7 +483,7 @@ class FilterListView(ImageTextImageListView):
         if not(selection_cb == None):
             tree_sel = self.treeview.get_selection()
             tree_sel.connect("changed", selection_cb)
-
+        
     def fill_data_model(self, filter_group):
         self.storemodel.clear()
         for i in range(0, len(filter_group)):
@@ -915,8 +925,9 @@ class MediaPanel():
         self.monitor_indicator = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "monitor_indicator.png")
         self.last_event_time = 0.0
         self.last_ctrl_selected_media_object = None
-        self.double_click_release = False # needed to get focus over to pos bar after double click, issa complicated.
-            
+        
+        self.double_click_release = False # needed to get focus over to pos bar after double click, usually media object grabs focus
+        
         global has_proxy_icon, is_proxy_icon, graphics_icon, imgseq_icon, audio_icon, pattern_icon, profile_warning_icon
         has_proxy_icon = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "has_proxy_indicator.png")
         is_proxy_icon = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "is_proxy_indicator.png")
@@ -1041,6 +1052,11 @@ class MediaPanel():
         self.clear_selection()
         for media_file in media_files:
             self.selected_objects.append(self.widget_for_mediafile[media_file])
+
+    def update_selected_bg_colors(self):
+        bg_color = gui.get_selected_bg_color()
+        for media_object in self.selected_objects:
+            media_object.widget.override_background_color(Gtk.StateType.NORMAL, bg_color)
 
     def empty_pressed(self, widget, event):
         self.clear_selection()
@@ -1994,20 +2010,6 @@ def display_media_file_popup_menu(media_file, callback, event):
     if media_file.type == appconsts.VIDEO or media_file.type == appconsts.IMAGE_SEQUENCE:
         item = _get_menu_item(_("Render Proxy File"), callback, ("Render Proxy File", media_file, event))
         media_file_menu.add(item)
-
-    """
-    if media_file.type == appconsts.VIDEO:
-        if media_file.info != None:
-
-            best_media_profile_index = mltprofiles.get_closest_matching_profile_index(media_file.info)
-            project_profile_index = mltprofiles.get_index_for_name(PROJECT().profile.description())
-
-            # Add this item if best profile does not match project profile
-            if best_media_profile_index != project_profile_index:
-                _add_separetor(media_file_menu)
-                item = _get_menu_item(_("Change Project Profile To Match..."), callback, ("Project Profile", media_file, event))
-                media_file_menu.add(item)
-    """
     
     media_file_menu.popup(None, None, None, None, event.button, event.time)
 
@@ -2597,21 +2599,9 @@ def get_all_tracks_popup_menu(event, callback):
     menu.popup(None, None, None, None, event.button, event.time)
 
 def get_audio_levels_popup_menu(event, callback):
-    # needs renaming
+    # needs renaming, we have more stuff here now
     menu = levels_menu
     guiutils.remove_children(menu)
-
-
-    """
-    ponter_sensitive_item = Gtk.CheckMenuItem()
-    ponter_sensitive_item.set_label(_("Tool Cursor Context Sensitive"))
-    ponter_sensitive_item.set_active(editorstate.cursor_is_tline_sensitive)
-    ponter_sensitive_item.connect("activate", callback, "pointer_sensitive_item")
-
-    menu.append(ponter_sensitive_item) 
-    
-    _add_separetor(menu)
-    """
 
     thumbs_item = Gtk.CheckMenuItem()
     thumbs_item.set_label(_("Display Clip Media Thumbnails"))
@@ -2631,6 +2621,15 @@ def get_audio_levels_popup_menu(event, callback):
     
     _add_separetor(menu)
 
+    scrub_item = Gtk.CheckMenuItem()
+    scrub_item.set_label(_("Audio scrubbing"))
+    scrub_item.set_active(editorpersistance.prefs.audio_scrubbing)
+    scrub_item.connect("activate", callback, "scrubbing")
+
+    menu.append(scrub_item)
+    
+    _add_separetor(menu)
+    
     allways_item = Gtk.RadioMenuItem()
     allways_item.set_label(_("Display All Audio Levels"))
     menu.append(allways_item)

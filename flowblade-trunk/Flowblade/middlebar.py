@@ -35,7 +35,6 @@ import guiutils
 import respaths
 import titler
 import tlineaction
-import toolnatron
 import updater
 import undo
 import workflow
@@ -160,7 +159,7 @@ def _create_buttons(editor_window):
     editor_window.edit_buttons_3.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "lift.png"), tlineaction.lift_button_pressed)
     editor_window.edit_buttons_3.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "ripple_delete.png"), tlineaction.ripple_delete_button_pressed)
     editor_window.edit_buttons_3.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "delete_range.png"), tlineaction.delete_range_button_pressed)
-    tooltips = [_("Splice Out - Delete"), _("Lift"), _("Ripple Delete"), _("Delete Range")]
+    tooltips = [_("Splice Out - Delete"), _("Lift - Control + Delete"), _("Ripple Delete"), _("Range Delete")]
     tooltip_runner = glassbuttons.TooltipRunner(editor_window.edit_buttons_3, tooltips)
     editor_window.edit_buttons_3.no_decorations = no_decorations
 
@@ -191,9 +190,8 @@ def _create_buttons(editor_window):
     editor_window.tools_buttons.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "open_mixer.png"), audiomonitoring.show_audio_monitor)
     editor_window.tools_buttons.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "open_titler.png"), titler.show_titler)
     editor_window.tools_buttons.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "open_gmic.png"), gmic.launch_gmic)
-    editor_window.tools_buttons.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "open_natron.png"), toolnatron.launch_natron_animations_tool)
     editor_window.tools_buttons.add_button(cairo.ImageSurface.create_from_png(IMG_PATH + "open_renderqueue.png"), lambda :batchrendering.launch_batch_rendering())
-    tooltips = [_("Audio Mixer"), _("Titler"), _("G'Mic Effects"), _("Natron Animations"), _("Batch Render Queue")]
+    tooltips = [_("Audio Mixer"), _("Titler"), _("G'Mic Effects"), _("Batch Render Queue")]
     tooltip_runner = glassbuttons.TooltipRunner(editor_window.tools_buttons, tooltips)
     editor_window.tools_buttons.no_decorations = True
     
@@ -255,7 +253,9 @@ def fill_with_TC_MIDDLE_pattern(buttons_row, window):
         left_panel.pack_start(guiutils.get_pad_label(60, 10), False, True, 10) # to left and right panel same size for centering
     left_panel.pack_start(Gtk.Label(), True, True, 0)
 
-    middle_panel = Gtk.HBox(False, 0) 
+    middle_panel = Gtk.HBox(False, 0)
+    middle_panel.pack_start(w.worflow_launch.widget, False, True, 0)
+    middle_panel.pack_start(guiutils.get_pad_label(7, MIDDLE_ROW_HEIGHT), False, True, 0) 
     middle_panel.pack_start(w.big_TC, False, True, 0)
     middle_panel.pack_start(guiutils.get_pad_label(10, 10), False, True, 0)
     middle_panel.pack_start(w.tool_selector.widget, False, True, 0)
@@ -278,6 +278,8 @@ def fill_with_COMPONETS_CENTERED_pattern(buttons_row, window):
     global w
     w = window
     buttons_row.pack_start(Gtk.Label(), True, True, 0)
+    buttons_row.pack_start(w.worflow_launch.widget, False, True, 0)
+    buttons_row.pack_start(guiutils.get_pad_label(7, MIDDLE_ROW_HEIGHT), False, True, 0) 
     buttons_row.pack_start(w.big_TC, False, True, 0)
     buttons_row.pack_start(guiutils.get_pad_label(7, MIDDLE_ROW_HEIGHT), False, True, 0) #### NOTE!!!!!! THIS DETERMINES THE HEIGHT OF MIDDLE ROW
     buttons_row.pack_start(w.tool_selector.widget, False, True, 0)

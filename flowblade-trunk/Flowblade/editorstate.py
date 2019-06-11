@@ -98,7 +98,7 @@ SCREEN_WIDTH = -1
 # Runtime environment data
 gtk_version = None
 mlt_version = None
-appversion = "0.10"
+appversion = "2.0.0"
 RUNNING_FROM_INSTALLATION = 0
 RUNNING_FROM_DEV_VERSION = 1
 app_running_from = RUNNING_FROM_INSTALLATION
@@ -120,6 +120,9 @@ attach_jackrack = False
 
 # Flag is used to block unwanted draw events during loads  
 project_is_loading = False
+
+# Audio Scrubbing
+#audio_scrubbing = True
 
 # Audio levels display mode, False means that audio levels are displayed on request
 display_all_audio_levels = True
@@ -199,8 +202,23 @@ def mlt_version_is_equal_or_greater(test_version):
     
     return False
 
-def mlt_version_is_equal_or_greater_correct(test_version):
+def mlt_version_is_greater_correct(test_version):
     runtime_ver = mlt_version.split(".")
+    test_ver = test_version.split(".")
+    
+    if runtime_ver[0] > test_ver[0]:
+        return True
+    elif runtime_ver[0] == test_ver[0]:
+        if runtime_ver[1] > test_ver[1]:
+            return True
+        elif runtime_ver[1] == test_ver[1]:
+            if  runtime_ver[2] >  test_ver[2]:
+                return True
+    
+    return False
+
+def runtime_version_greater_then_test_version(test_version, runtime_version):
+    runtime_ver = runtime_version.split(".")
     test_ver = test_version.split(".")
     
     if runtime_ver[0] > test_ver[0]:
@@ -242,14 +260,8 @@ def screen_size_small():
     
     return False
 
-def screen_size_small_height():
-    if SCREEN_HEIGHT < 898:
-        return True
-    else:
-        return False
-
 def screen_size_large_height():
-    if SCREEN_HEIGHT > 1050:
+    if SCREEN_HEIGHT > 1048:
         return True
     else:
         return False

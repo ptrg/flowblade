@@ -144,9 +144,10 @@ CONVERTING_TO_USE_ORIGINAL_MEDIA = 3
 
 # Autosave directory relative path
 AUTOSAVE_DIR = "autosave/"
-AUDIO_LEVELS_DIR = "audiolevels/"
 
 # Hidden media folders
+# NOTE: We have not been fully consistant with the ending forward slashes.
+AUDIO_LEVELS_DIR = "audiolevels/"
 THUMBNAILS_DIR = "thumbnails"
 RENDERED_CLIPS_DIR = "rendered_clips"
 GMIC_DIR = "gmic"
@@ -156,7 +157,9 @@ MATCH_FRAME_DIR = "match_frame"
 MATCH_FRAME = MATCH_FRAME_DIR + "/match_frame.png"
 MATCH_FRAME_NEW = MATCH_FRAME_DIR + "/match_frame_new.png"
 TRIM_VIEW_DIR = "trim_view"
-NATRON_DIR = "natron"
+USER_PROFILES_DIR = "user_profiles/"
+USER_PROFILES_DIR_NO_SLASH = "user_profiles"
+BATCH_DIR = "batchrender/"
 
 # Luma bands
 SHADOWS = 0
@@ -209,6 +212,7 @@ P_PROP_TLINE_SHRINK_VERTICAL = "tline_shrink_vertical"
 P_PROP_LAST_RENDER_SELECTIONS = "P_PROP_LAST_RENDER_SELECTIONS"
 P_PROP_TRANSITION_ENCODING = "P_PROP_TRANSITION_ENCODING"
 P_PROP_AUTO_FOLLOW = "P_PROP_AUTO_FOLLOW"
+
 
 # A context defining action taken when mouse press happens based on edit mode ands mouse position
 POINTER_CONTEXT_NONE = 0

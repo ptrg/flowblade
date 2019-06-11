@@ -46,8 +46,11 @@ import updater
 
 STANDARD_PRESET = 0
 FILM_STYLE_PRESET = 1
+KEEP_EXISTING = 2
 
 SELECTED_BG = Gdk.RGBA(0.1, 0.31, 0.58,1.0)
+WHITE_TEXT = Gdk.RGBA(0.9, 0.9, 0.9,1.0)
+DARK_TEXT = Gdk.RGBA(0.1, 0.1, 0.1,1.0)
         
 # Timeline tools data
 _TOOLS_DATA = None
@@ -130,6 +133,18 @@ def get_tline_tool_popup_menu(launcher, event, callback):
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
 
+def get_tline_tool_working_set():
+    tools = []
+    
+    kb_shortcut_number = 1
+    for tool_id in editorpersistance.prefs.active_tools:
+        tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
+        tools.append((tool_name, kb_shortcut_number))
+
+        kb_shortcut_number = kb_shortcut_number + 1
+
+    return tools
+    
 def _tools_menu_hidden(tools_menu, menu_items):
     # needed to make number 1-6 work elsewhere in the application
     for menu_item in menu_items:
@@ -188,7 +203,6 @@ def workflow_menu_launched(widget, event):
     _build_radio_menu_items_group(delete_menu, labels, msgs, _workflow_menu_callback, 0)
 
     delete_item.set_submenu(delete_menu)
-    behaviours_menu.add(delete_item)
 
     dnd_item = Gtk.MenuItem.new_with_label(_("Drag'n'Drop Action"))
     dnd_item.show()
@@ -333,12 +347,12 @@ def _get_workflow_tool_submenu(callback, tool_id, position):
         pref_item.show()
         sub_menu.add(pref_item)
         guiutils.add_separetor(sub_menu)
-        
+
     return sub_menu
     
 def _workflow_menu_callback(widget, data):
     tool_id, msg = data
-
+    
     if msg == "activity":
         if widget.get_active() == False:
             editorpersistance.prefs.active_tools.remove(tool_id)
@@ -365,6 +379,10 @@ def _workflow_menu_callback(widget, data):
         editorpersistance.prefs.dnd_action = appconsts.DND_ALWAYS_INSERT
     elif  msg ==  "tooltips":
         editorpersistance.prefs.show_tool_tooltips = widget.get_active()
+    elif msg == "delete lift" and widget.get_active() == True:
+        print "lift"
+    elif msg == "delete splice" and widget.get_active() == True:
+        print "splice"
     else:
         try:
             pos = int(msg)
@@ -396,7 +414,6 @@ def tline_tool_keyboard_selected(event):
 def _TLINE_TOOL_OVERWRITE_box_selection_pref(check_menu_item):
     editorpersistance.prefs.box_for_empty_press_in_overwrite_tool = check_menu_item.get_active()
     editorpersistance.save()
-
 
 
 
@@ -448,10 +465,14 @@ class WorkflowDialog(Gtk.Dialog):
         workflow_select_item_1 = self.get_workflow_select_item(STANDARD_PRESET, workflow_name, stadard_preset_workflow_text_1)
 
         workflow_name = _("<b>Film Style</b>")
-        filmstyle_preset_workflow_text_2 = _("Film Style workflow has the <b>Insert</b> tool as default tool\nand employs insert style editing.\nThis is the workflow in previous versions of the application.")
+        filmstyle_preset_workflow_text_2 = _("Film Style workflow has the <b>Insert</b> tool as default tool\nand employs insert style editing.\nThis was the workflow in previous versions of the application.")
         workflow_select_item_2 = self.get_workflow_select_item(FILM_STYLE_PRESET, workflow_name, filmstyle_preset_workflow_text_2)
+
+        workflow_name = _("<b>Keep Existing Worflow</b>")
+        keep_workflow_text_2 = _("Select this if you have installed new version and wish to keep your existing workflow.")
+        workflow_select_item_3 = self.get_workflow_select_item(KEEP_EXISTING, workflow_name, keep_workflow_text_2)
         
-        self.workflow_items = [workflow_select_item_1, workflow_select_item_2]
+        self.workflow_items = [workflow_select_item_1, workflow_select_item_2, workflow_select_item_3]
 
         panel_vbox = Gtk.VBox(False, 2)
         panel_vbox.pack_start(guiutils.get_pad_label(24, 12), False, False, 0)
@@ -463,6 +484,7 @@ class WorkflowDialog(Gtk.Dialog):
         panel_vbox.pack_start(guiutils.get_centered_box([info_label_3]), False, False, 0)
         panel_vbox.pack_start(workflow_select_item_1, False, False, 0)
         panel_vbox.pack_start(workflow_select_item_2, False, False, 0)
+        panel_vbox.pack_start(workflow_select_item_3, False, False, 0)
         panel_vbox.pack_start(guiutils.get_pad_label(24, 48), False, False, 0)
         panel_vbox.pack_start(guiutils.get_centered_box([info_label_7]), False, False, 0)
         panel_vbox.pack_start(guiutils.get_centered_box([info_label_4, icon, info_label_5]), False, False, 0)
@@ -491,7 +513,6 @@ class WorkflowDialog(Gtk.Dialog):
      
         widget = Gtk.EventBox()
         widget.connect("button-press-event", lambda w,e: self.selected_callback(w, item_number))
-        #widget.connect("button-release-event", lambda w,e: release_callback(self, w, e))
         widget.set_can_focus(True)
         widget.add_events(Gdk.EventMask.KEY_PRESS_MASK)
 
@@ -506,15 +527,21 @@ class WorkflowDialog(Gtk.Dialog):
     def set_item_color(self, widget):
         if widget.item_number == self.selection:
             widget.override_background_color(Gtk.StateType.NORMAL, SELECTED_BG)
+            if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
+                widget.override_color(Gtk.StateType.NORMAL, WHITE_TEXT)
         else:
             widget.override_background_color(Gtk.StateType.NORMAL, gui.get_bg_color())
+            if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
+                widget.override_color(Gtk.StateType.NORMAL, DARK_TEXT)
 
     def done(self, dialog, response_id):
         if self.selection == STANDARD_PRESET:
             _set_workflow_STANDARD()
-        else:
+        elif self.selection == FILM_STYLE_PRESET:
             _set_workflow_FILM_STYLE()
-            
+
+        # selection 3, Keep Existing Worflow is just noop
+
         dialog.destroy()
 
     def selected_callback(self, w, item_number):

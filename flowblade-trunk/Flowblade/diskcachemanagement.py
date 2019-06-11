@@ -24,11 +24,11 @@ from os import listdir
 from os.path import isfile, join
 import os
 
+import appconsts
 import dialogutils
 import gui
 import guiutils
-import utils
-
+import userfolders
 
 NO_WARNING = 0
 RECREATE_WARNING = 1
@@ -81,7 +81,8 @@ class DiskFolderManagementPanel:
         self.vbox.pack_start(row, False, False, 0)
 
     def get_cache_folder(self):
-        return utils.get_hidden_user_dir_path() + "/" + self.folder
+        cf = userfolders.get_cache_dir() + self.folder
+        return cf
 
     def get_folder_files(self):
         cache_folder = self.get_cache_folder()
@@ -167,11 +168,11 @@ def show_disk_management_dialog():
 
 def _get_disk_dir_panels():
     panels = []
-    panels.append(DiskFolderManagementPanel("audiolevels", _("Audio Levels Data"), RECREATE_WARNING))
-    panels.append(DiskFolderManagementPanel("gmic", _("G'Mic Tool Session Data"), NO_WARNING))
-    panels.append(DiskFolderManagementPanel("natron", _("Natron Clip Export Data"), NO_WARNING))
-    panels.append(DiskFolderManagementPanel("rendered_clips", _("Rendered Files"), PROJECT_DATA_WARNING))
-    panels.append(DiskFolderManagementPanel("thumbnails", _("Thumbnails"), RECREATE_WARNING))
-    panels.append(DiskFolderManagementPanel("user_profiles", _("User Created Custom Profiles"), PROJECT_DATA_WARNING))
+    panels.append(DiskFolderManagementPanel(appconsts.AUDIO_LEVELS_DIR, _("Audio Levels Data"), RECREATE_WARNING))
+    panels.append(DiskFolderManagementPanel(appconsts.GMIC_DIR, _("G'Mic Tool Session Data"), NO_WARNING))
+    # FIXME: code assumes that all these are in same root folder, not anymore, 
+    #panels.append(DiskFolderManagementPanel(appconsts.RENDERED_CLIPS_DIR, _("Rendered Files"), PROJECT_DATA_WARNING))
+    panels.append(DiskFolderManagementPanel(appconsts.THUMBNAILS_DIR, _("Thumbnails"), RECREATE_WARNING))
+    panels.append(DiskFolderManagementPanel(appconsts.USER_PROFILES_DIR_NO_SLASH, _("User Created Custom Profiles"), PROJECT_DATA_WARNING))
 
     return panels
