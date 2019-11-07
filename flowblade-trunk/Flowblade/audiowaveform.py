@@ -31,6 +31,7 @@ import time
 from gi.repository import Gtk, Gdk
 
 import appconsts
+import atomicfile
 import dialogutils
 from editorstate import PROJECT
 import gui
@@ -61,8 +62,7 @@ def set_waveform_displayer_clip_from_popup(data):
 
     cache_file_path = userfolders.get_cache_dir() + appconsts.AUDIO_LEVELS_DIR + _get_unique_name_for_media(clip.path)
     if os.path.isfile(cache_file_path):
-        f = open(cache_file_path)
-        frame_levels = pickle.load(f)
+        frame_levels = utils.unpickle(cache_file_path)
         frames_cache[clip.path] = frame_levels
         clip.waveform_data = frame_levels
         updater.repaint_tline()
@@ -148,8 +148,9 @@ class WaveformCreator(threading.Thread):
 
         if not self.abort:
             self.clip.waveform_data = frame_levels
-            write_file = file(self.file_cache_path, "wb")
-            pickle.dump(frame_levels, write_file)
+            with atomicfile.AtomicFileWriter(self.file_cache_path, "wb") as afw:
+                write_file = afw.get_file()
+                pickle.dump(frame_levels, write_file)
 
             Gdk.threads_enter()
             self.dialog.progress_bar.set_fraction(1.0)
@@ -171,7 +172,7 @@ class WaveformCreator(threading.Thread):
         service = clip.get("mlt_service")
         if service.startswith("xml"):
             service = "xml-nogl"
-        temp_producer = mlt.Producer(PROJECT().profile, service.encode('utf-8'), clip.get("resource"))
+        temp_producer = mlt.Producer(PROJECT().profile, service, clip.get("resource"))
         channels = mlt.Filter(PROJECT().profile, "audiochannels")
         converter = mlt.Filter(PROJECT().profile, "audioconvert")
         self.levels = mlt.Filter(PROJECT().profile, "audiolevel")
@@ -188,7 +189,7 @@ def _waveform_render_progress_dialog(callback, title, text, progress_bar, parent
     dialog = Gtk.Dialog(title,
                          parent_window,
                          Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                         (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT))
+                         (_("Cancel"), Gtk.ResponseType.REJECT))
 
     dialog.text_label = Gtk.Label(label=text)
     dialog.text_label.set_use_markup(True)

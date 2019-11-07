@@ -21,6 +21,14 @@
 """
 Module handles saving and loading data that is related to the editor and not any particular project.
 """
+
+"""
+    Change History:
+        Aug-2019 - SvdB - AS:
+            Save value of Autosave preference.
+            See preferenceswindow.py for more info
+"""
+
 import gi
 gi.require_version('Gtk', '3.0') 
 from gi.repository import Gtk
@@ -29,6 +37,7 @@ import os
 import pickle
 
 import appconsts
+import atomicfile
 import mltprofiles
 import userfolders
 import utils
@@ -48,7 +57,6 @@ NO_DECORATIONS = 2
 prefs = None
 recent_projects = None
 
-
 def load():
     """
     If docs fail to load, new ones are created and saved.
@@ -57,13 +65,14 @@ def load():
     recents_file_path = userfolders.get_config_dir() + RECENT_DOC
 
     global prefs, recent_projects
+
     try:
-        f = open(prefs_file_path)
-        prefs = pickle.load(f)
+        prefs = utils.unpickle(prefs_file_path)
     except:
         prefs = EditorPreferences()
-        write_file = file(prefs_file_path, "wb")
-        pickle.dump(prefs, write_file)
+        with atomicfile.AtomicFileWriter(prefs_file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(prefs, write_file)
 
     # Override deprecated preferences to default values.
     prefs.delta_overlay = True
@@ -73,13 +82,13 @@ def load():
     prefs.remember_monitor_clip_frame = True
 
     try:
-        f = open(recents_file_path)
-        recent_projects = pickle.load(f)
+        recent_projects = utils.unpickle(recents_file_path)
     except:
         recent_projects = utils.EmptyClass()
         recent_projects.projects = []
-        write_file = file(recents_file_path, "wb")
-        pickle.dump(recent_projects, write_file)
+        with atomicfile.AtomicFileWriter(recents_file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(recent_projects, write_file)
 
     # Remove non-existing projects from recents list
     remove_list = []
@@ -90,8 +99,9 @@ def load():
     if len(remove_list) > 0:
         for proj_path in remove_list:
             recent_projects.projects.remove(proj_path)
-        write_file = file(recents_file_path, "wb")
-        pickle.dump(recent_projects, write_file)
+        with atomicfile.AtomicFileWriter(recents_file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(recent_projects, write_file)
         
     # Versions of program may have different prefs objects and 
     # we may need to to update prefs on disk if user has e.g.
@@ -101,9 +111,10 @@ def load():
     if len(prefs.__dict__) != len(current_prefs.__dict__):
         current_prefs.__dict__.update(prefs.__dict__)
         prefs = current_prefs
-        write_file = file(prefs_file_path, "wb")
-        pickle.dump(prefs, write_file)
-        print "prefs updated to new version, new param count:", len(prefs.__dict__)
+        with atomicfile.AtomicFileWriter(prefs_file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(prefs, write_file)
+        print("prefs updated to new version, new param count:", len(prefs.__dict__))
 
 def save():
     """
@@ -112,11 +123,13 @@ def save():
     prefs_file_path = userfolders.get_config_dir()+ PREFS_DOC
     recents_file_path = userfolders.get_config_dir() + RECENT_DOC
     
-    write_file = file(prefs_file_path, "wb")
-    pickle.dump(prefs, write_file)
+    with atomicfile.AtomicFileWriter(prefs_file_path, "wb") as afw:
+        write_file = afw.get_file()
+        pickle.dump(prefs, write_file)
 
-    write_file = file(recents_file_path, "wb")
-    pickle.dump(recent_projects, write_file)
+    with atomicfile.AtomicFileWriter(recents_file_path, "wb") as afw:
+        write_file = afw.get_file()
+        pickle.dump(recent_projects, write_file)
 
 def add_recent_project_path(path):
     """
@@ -151,8 +164,9 @@ def remove_non_existing_recent_projects():
     if len(remove_list) > 0:
         for proj_path in remove_list:
             recent_projects.projects.remove(proj_path)
-        write_file = file(recents_file_path, "wb")
-        pickle.dump(recent_projects, write_file)
+        with atomicfile.AtomicFileWriter(recents_file_path, "wb") as afw:
+            write_file = afw.get_file()
+            pickle.dump(recent_projects, write_file)
         
 def fill_recents_menu_widget(menu_item, callback):
     """
@@ -192,20 +206,24 @@ def get_recent_projects():
     return proj_list
 
 def update_prefs_from_widgets(widgets_tuples_tuple):
+    # Aug-2019 - SvdB - BB - Replace double_track_hights by double_track_hights
     # Unpack widgets
     gen_opts_widgets, edit_prefs_widgets, playback_prefs_widgets, view_prefs_widgets, performance_widgets = widgets_tuples_tuple
 
-    default_profile_combo, open_in_last_opened_check, open_in_last_rendered_check, undo_max_spin, load_order_combo = gen_opts_widgets
+    # Aug-2019 - SvdB - AS - added autosave_combo
+    default_profile_combo, open_in_last_opened_check, open_in_last_rendered_check, undo_max_spin, load_order_combo, \
+        autosave_combo = gen_opts_widgets
     
     # Jul-2016 - SvdB - Added play_pause_button
     # Apr-2017 - SvdB - Added ffwd / rev values
-    gfx_length_spin, cover_delete, mouse_scroll_action, hide_file_ext_button, hor_scroll_dir, kf_edit_playhead_move = edit_prefs_widgets
+    gfx_length_spin, cover_delete, mouse_scroll_action, hide_file_ext_button, \
+    hor_scroll_dir, kf_edit_playhead_move, effects_editor_clip_load = edit_prefs_widgets
     
     auto_center_check, play_pause_button, auto_center_on_updown, \
     ffwd_rev_shift_spin, ffwd_rev_ctrl_spin, ffwd_rev_caps_spin, follow_move_range, loop_clips = playback_prefs_widgets
     
     force_language_combo, disp_splash, buttons_style, theme, theme_combo, audio_levels_combo, \
-    window_mode_combo, full_names, double_track_hights, top_row_layout = view_prefs_widgets
+    window_mode_combo, full_names, double_track_hights, top_row_layout, layout_monitor = view_prefs_widgets
 
     # Jan-2017 - SvdB
     perf_render_threads, perf_drop_frames = performance_widgets
@@ -226,6 +244,7 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     prefs.hide_file_ext = hide_file_ext_button.get_active()
     prefs.mouse_scroll_action_is_zoom = (mouse_scroll_action.get_active() == 0)
     prefs.scroll_horizontal_dir_up_forward = (hor_scroll_dir.get_active() == 0)
+    prefs.single_click_effects_editor_load = (effects_editor_clip_load.get_active() == 1)
     # Apr-2017 - SvdB - ffwd / rev values
     prefs.ffwd_rev_shift = int(ffwd_rev_shift_spin.get_adjustment().get_value())
     prefs.ffwd_rev_ctrl = int(ffwd_rev_ctrl_spin.get_adjustment().get_value())
@@ -250,10 +269,9 @@ def update_prefs_from_widgets(widgets_tuples_tuple):
     prefs.playback_follow_move_tline_range = follow_move_range.get_active()
     prefs.theme = theme.get_active()
     prefs.top_row_layout = top_row_layout.get_active()
-
-    #if prefs.shortcuts != shortcuts.shortcut_files[shortcuts_combo.get_active()]:
-    #    prefs.shortcuts = shortcuts.shortcut_files[shortcuts_combo.get_active()]
-    #    shortcuts.load_shortcuts()
+    # Aug-2019 - SvdB - AS
+    prefs.auto_save_delay_value_index = autosave_combo.get_active()
+    prefs.layout_display_index = layout_monitor.get_active()
 
 
 def get_graphics_default_in_out_length():
@@ -349,4 +367,6 @@ class EditorPreferences:
         self.loop_clips = False
         self.audio_scrubbing = False
         self.force_language = "None"
-
+        self.default_compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
+        self.single_click_effects_editor_load = False
+        self.layout_display_index = 0 # 0 == full area - 1,2... monitor number

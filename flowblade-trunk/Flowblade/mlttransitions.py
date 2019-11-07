@@ -72,11 +72,15 @@ compositors = None
 blenders = None
 autofades = None
 alpha_combiners = None
+wipe_compositors = None
+
+# these are no longer presented as options for users since 2.4
+dropped_compositors = ["##pict_in_pict", "##opacity_kf", "##dodge"]
 
 def init_module():
 
     # translations and module load order make us do this in method instead of at module load
-    global wipe_lumas, compositors, blenders, name_for_type, rendered_transitions, single_track_render_type_names, autofades, alpha_combiners
+    global wipe_lumas, compositors, blenders, name_for_type, rendered_transitions, single_track_render_type_names, autofades, alpha_combiners, wipe_compositors
     wipe_lumas = { \
                 _("Burst"):"burst.pgm",
                 _("Checkerboard"):"checkerboard.pgm",
@@ -132,12 +136,11 @@ def init_module():
     # name -> mlt_compositor_transition_infos key dict.
     unsorted_compositors = [ (_("Dissolve"),"##opacity_kf"),
                              (_("Picture in Picture"),"##pict_in_pict"),
-                             (_("Region"), "##region"),
+
                              (_("Affine Blend"), "##affineblend"),
                              (_("Blend"), "##blend"),
-                             (_("Wipe Clip Length"),"##wipe"),
-                             (_("Transform"),"##affine"),
-                             (_("LumaToAlpha"),"##matte")]
+
+                             (_("Transform"),"##affine")]
 
     compositors = sorted(unsorted_compositors, key=lambda comp: comp[0])   
 
@@ -165,10 +168,14 @@ def init_module():
     autofades = [(_("Fade In"),"##auto_fade_in"),
                 (_("Fade Out"),"##auto_fade_out")]
     
-    alpha_combiners = [ (_("Alpha XOR"),"##alphaxor"),
+    alpha_combiners = [ (_("LumaToAlpha"),"##matte"), 
+                        (_("Alpha XOR"),"##alphaxor"),
                         (_("Alpha Out"),"##alphaout"),
                         (_("Alpha In"),"##alphain")]
-                        
+
+    wipe_compositors = [(_("Wipe/Translate"), "##region"), 
+                        (_("Wipe Clip Length"),"##wipe")]
+
     for comp in compositors:
         name, comp_type = comp
         name_for_type[comp_type] = name
@@ -183,6 +190,10 @@ def init_module():
 
     for acomb in alpha_combiners:
         name, comp_type = acomb
+        name_for_type[comp_type] = name
+    
+    for wc in wipe_compositors:
+        name, comp_type = wc
         name_for_type[comp_type] = name
         
     # Rendered transition names and types
@@ -383,8 +394,9 @@ class CompositorObject:
         self.transition.properties = copy.deepcopy(source_compositor.transition.properties)
         self.transition.update_editable_mlt_properties()
 
-    def get_copy_paste_objects(self):
-        # Copy-paste is handled with tuple data (properties, mlt_service_id)
+    def get_copy_paste_data(self):
+        # Copy-paste data object is tuple (properties, mlt_service_id)
+        # This saved with type info in editorstate.py
         return (copy.deepcopy(self.transition.properties), self.transition.info.mlt_service_id)
 
     def do_values_copy_paste(self, copy_paste_data):
@@ -413,12 +425,12 @@ def load_compositors_xml(transitions):
     """
     compositors_doc = xml.dom.minidom.parse(respaths.COMPOSITORS_XML_DOC)
 
-    print "Loading transitions..."
+    print("Loading transitions...")
     compositor_nodes = compositors_doc.getElementsByTagName(COMPOSITOR)
     for c_node in compositor_nodes:
         compositor_info = CompositorTransitionInfo(c_node)
         if (not compositor_info.mlt_service_id in transitions) and len(transitions) > 0:
-            print "MLT transition " + compositor_info.mlt_service_id + " not found."
+            print("MLT transition " + compositor_info.mlt_service_id + " not found.")
             global not_found_transitions
             not_found_transitions.append(compositor_info)
             continue
@@ -427,7 +439,7 @@ def load_compositors_xml(transitions):
 
 def get_wipe_resource_path_for_sorted_keys_index(sorted_keys_index):
     # This exists to avoid sending a list of sorted keys around or having to use global variables
-    keys = wipe_lumas.keys()
+    keys = list(wipe_lumas.keys())
     keys.sort()
     return get_wipe_resource_path(keys[sorted_keys_index])
     
@@ -530,7 +542,7 @@ def get_rendered_transition_tractor(current_sequence,
         kf_str = "0=0/0:100%x100%:0.0;"+ str(tractor.get_length() - 1) + "=0/0:100%x100%:100.0"
     elif transition_type == RENDERED_COLOR_DIP:
         length = action_from_out - action_from_in
-        first_clip_length = length / 2
+        first_clip_length = length // 2
         second_clip_length = length - first_clip_length
         color_clip = patternproducer.create_color_producer(current_sequence.profile, gdk_color_str)
         track0.insert(color_clip, 0, 0, length)

@@ -191,7 +191,7 @@ def load_render_profiles():
     Load render profiles from xml into DOM at start-up and build
     object tree.
     """
-    print "Loading render profiles..."
+    print("Loading render profiles...")
     file_path = respaths.ROOT_PATH + RENDER_ENCODING_FILE
     global render_encoding_doc
     render_encoding_doc = xml.dom.minidom.parse(file_path)
@@ -340,7 +340,7 @@ def get_args_vals_tuples_list_for_encoding_and_quality(profile, enc_opt_index, q
 
     # Quality options  key, value list
     if quality_option != None:
-        for k, v in quality_option.add_map.iteritems():
+        for k, v in quality_option.add_map.items():
             args_vals_list.append((str(k), str(v)))
     
     return args_vals_list
@@ -387,14 +387,6 @@ def _parse_line(line_start, line_end, buf):
         return (None, _("Arg name token is empty."))
     if len(v) == 0:
         return (None, _("Arg value token is empty."))
-    try:
-        k.decode('ascii')
-    except UnicodeDecodeError:
-        return (None, _("Non-ascii char in Arg name."))
-    try:
-        v.decode('ascii')
-    except UnicodeDecodeError:
-        return (None, _("Non-ascii char in Arg value."))
     if k.find(" ") != -1:
         return (None,  _("Whitespace in Arg name."))
     if v.find(" ") != -1:
@@ -414,7 +406,7 @@ class FileRenderPlayer(threading.Thread):
         self.wait_for_producer_end_stop = True
         self.running = False
         self.has_started_running = False
-        print "FileRenderPlayer started, start frame: " + str(self.start_frame) + ", stop frame: " + str(self.stop_frame)
+        print("FileRenderPlayer started, start frame: " + str(self.start_frame) + ", stop frame: " + str(self.stop_frame))
         self.consumer_pos_stop_add = 1 # HACK!!! File renders work then this is one, screenshot render requires this to be 2 to work 
         threading.Thread.__init__(self)
 
@@ -447,7 +439,7 @@ class FileRenderPlayer(threading.Thread):
 
             time.sleep(0.1)
 
-        print "FileRenderPlayer stopped, producer frame: " + str(self.producer.frame())
+        print("FileRenderPlayer stopped, producer frame: " + str(self.producer.frame()))
 
         self.stopped = True
                 
@@ -476,22 +468,23 @@ class FileRenderPlayer(threading.Thread):
 
 
 class XMLRenderPlayer(threading.Thread):
-    def __init__(self, file_name, callback, data):
+    def __init__(self, file_name, callback, data, rendered_sequence=None):
         self.file_name = file_name
         self.render_done_callback = callback
         self.data = data
         self.current_playback_frame = 0
+        self.rendered_sequence = rendered_sequence
 
         threading.Thread.__init__(self)
 
     def run(self):
-        print "Starting XML render"
+        print("Starting XML render")
         player = PLAYER()
         
         # Don't try anything if somehow this was started 
         # while timeline rendering is running
         if player.is_rendering:
-            print "Can't render XML when another render is already running!"
+            print("Can't render XML when another render is already running!")
             return
 
         # Stop all playback before producer is disconnected
@@ -506,7 +499,10 @@ class XMLRenderPlayer(threading.Thread):
             time.sleep(0.1)
         
         # Get render producer
-        timeline_producer = PROJECT().c_seq.tractor
+        if self.rendered_sequence == None: # default is current sequence
+            timeline_producer = PROJECT().c_seq.tractor
+        else:
+            timeline_producer = self.rendered_sequence.tractor
 
         # Get render consumer
         xml_consumer = mlt.Consumer(PROJECT().profile, "xml", str(self.file_name))
@@ -518,10 +514,10 @@ class XMLRenderPlayer(threading.Thread):
 
         # Wait until done
         while xml_consumer.is_stopped() == False:
-            print "In XML render wait loop..."
+            print("In XML render wait loop...")
             time.sleep(0.1)
     
-        print "XML render done"
+        print("XML render done")
 
         # Get app player going again
         player.connect_and_start()
@@ -558,10 +554,10 @@ class XMLCompoundRenderPlayer(threading.Thread):
 
         # Wait until done
         while xml_consumer.is_stopped() == False:
-            print "In XML render wait loop..."
+            print("In XML render wait loop...")
             time.sleep(0.1)
     
-        print "XML compound clip render done"
+        print("XML compound clip render done")
 
         self.render_done_callback(self.file_name, self.media_name)
 

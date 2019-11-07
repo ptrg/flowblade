@@ -133,11 +133,14 @@ def _group_selection_changed(group_combo, filters_list_view):
     filters_list_view.fill_data_model(filters_array)
     filters_list_view.treeview.get_selection().select_path("0")
 
-def set_clip(new_clip, new_track, new_index):
+def set_clip(new_clip, new_track, new_index, show_tab=True):
     """
     Sets clip being edited and inits gui.
     """
     global clip, track, clip_index
+    if clip == new_clip and track == new_track and clip_index == new_index and show_tab==False:
+        return
+
     clip = new_clip
     track = new_track
     clip_index = new_index
@@ -153,7 +156,8 @@ def set_clip(new_clip, new_track, new_index):
     else:
         effect_selection_changed()
 
-    gui.middle_notebook.set_current_page(filters_notebook_index) # 2 == index of clipeditor page in notebook
+    if show_tab:
+        gui.middle_notebook.set_current_page(filters_notebook_index) # 2 == index of clipeditor page in notebook
 
 def effect_select_row_double_clicked(treeview, tree_path, col):
     add_currently_selected_effect()
@@ -217,6 +221,9 @@ def create_widgets():
     """
     Widgets for editing clip effects properties.
     """
+    # Aug-2019 - SvdB - BB
+    prefs = editorpersistance.prefs
+
     widgets.clip_info = guicomponents.ClipInfoPanel()
     
     widgets.exit_button = Gtk.Button()
@@ -237,11 +244,11 @@ def create_widgets():
     widgets.value_edit_frame.add(widgets.value_edit_box)
 
     widgets.add_effect_b = Gtk.Button()
-    widgets.add_effect_b.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filter_add.png"))
+    widgets.add_effect_b.set_image(guiutils.get_image("filter_add"))
     widgets.del_effect_b = Gtk.Button()
-    widgets.del_effect_b.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filter_delete.png"))
+    widgets.del_effect_b.set_image(guiutils.get_image("filter_delete"))
     widgets.toggle_all = Gtk.Button()
-    widgets.toggle_all.set_image(Gtk.Image.new_from_file(respaths.IMAGE_PATH + "filters_all_toggle.png"))
+    widgets.toggle_all.set_image(guiutils.get_image("filters_all_toggle"))
 
     widgets.add_effect_b.connect("clicked", lambda w,e: add_effect_pressed(), None)
     widgets.del_effect_b.connect("clicked", lambda w,e: delete_effect_pressed(), None)
@@ -441,7 +448,7 @@ def reinit_current_effect():
     effect_selection_changed(True)
 
 def effect_selection_changed(use_current_filter_index=False):
-    global keyframe_editor_widgets
+    global keyframe_editor_widgets, current_filter_index
 
     # Check we have clip
     if clip == None:
@@ -480,7 +487,6 @@ def effect_selection_changed(use_current_filter_index=False):
 
     filter_object = clip.filters[filter_index]
     
-    global current_filter_index
     current_filter_index = filter_index
     
     # Create EditableProperty wrappers for properties
@@ -515,9 +521,11 @@ def effect_selection_changed(use_current_filter_index=False):
                 editor_type = ep.args[propertyeditorbuilder.EDITOR]
             except KeyError:
                 editor_type = propertyeditorbuilder.SLIDER # this is the default value
+            
             if ((editor_type == propertyeditorbuilder.KEYFRAME_EDITOR)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_RELEASE)
-                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)):
+                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)
+                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)):
                     keyframe_editor_widgets.append(editor_row)
             
             # if slider property is being dedited as keyrame property
@@ -658,8 +666,7 @@ def _save_effect_values_dialog_callback(dialog, response_id):
 def _load_effect_values_dialog_callback(dialog, response_id):
     if response_id == Gtk.ResponseType.ACCEPT:
         load_path = dialog.get_filenames()[0]
-        f = open(load_path)
-        effect_data = pickle.load(f)
+        effect_data = utils.unpickle(load_path)
         
         filter_object = clip.filters[current_filter_index]
         

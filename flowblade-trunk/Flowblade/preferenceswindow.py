@@ -18,6 +18,13 @@
     along with Flowblade Movie Editor.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+"""
+    Change History:
+        Aug-2019 - SvdB - AS:
+            Save value of Autosave preference.
+            This impacts the following files: preferenceswindow, editorpersistance, app
+"""
+
 from gi.repository import Gtk
 
 import appconsts
@@ -27,21 +34,20 @@ import editorpersistance
 import gui
 import guiutils
 import mltprofiles
-# Jan-2017 - SvdB - To get the number of CPU cores
 import multiprocessing
+import utils
 
 PREFERENCES_WIDTH = 730
 PREFERENCES_HEIGHT = 440
 PREFERENCES_LEFT = 410
-
 
 def preferences_dialog():
 
 
     dialog = Gtk.Dialog(_("Editor Preferences"), None,
                     Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                    (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT,
-                    _("OK").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+                    (_("Cancel"), Gtk.ResponseType.REJECT,
+                    _("OK"), Gtk.ResponseType.ACCEPT))
 
     gen_opts_panel, gen_opts_widgets = _general_options_panel()
     edit_prefs_panel, edit_prefs_widgets = _edit_prefs_panel()
@@ -59,7 +65,6 @@ def preferences_dialog():
     notebook.append_page(playback_prefs_panel, Gtk.Label(label=_("Playback")))
     notebook.append_page(view_pres_panel, Gtk.Label(label=_("View")))
     notebook.append_page(performance_panel, Gtk.Label(label=_("Performance")))
-    #notebook.append_page(shortcuts_panel, Gtk.Label(label=_("Shortcuts")))
     guiutils.set_margins(notebook, 4, 24, 6, 0)
 
     dialog.connect('response', _preferences_dialog_callback, (gen_opts_widgets, edit_prefs_widgets, playback_prefs_widgets, view_pref_widgets, \
@@ -105,10 +110,12 @@ def _general_options_panel():
     undo_max_spin.set_numeric(True)
 
     autosave_combo = Gtk.ComboBoxText()
-    AUTO_SAVE_OPTS = ((-1, _("No Autosave")),(1, _("1 min")),(2, _("2 min")),(5, _("5 min")))
+    # Aug-2019 - SvdB - AS - This is now initialized in app.main
+    # Using editorpersistance.prefs.AUTO_SAVE_OPTS as source
+    # AUTO_SAVE_OPTS = ((-1, _("No Autosave")),(1, _("1 min")),(2, _("2 min")),(5, _("5 min")))
 
-    for i in range(0, len(AUTO_SAVE_OPTS)):
-        time, desc = AUTO_SAVE_OPTS[i]
+    for i in range(0, len(editorpersistance.prefs.AUTO_SAVE_OPTS)):
+        time, desc = editorpersistance.prefs.AUTO_SAVE_OPTS[i]
         autosave_combo.append_text(desc)
     autosave_combo.set_active(prefs.auto_save_delay_value_index)
 
@@ -137,7 +144,8 @@ def _general_options_panel():
 
     guiutils.set_margins(vbox, 12, 0, 12, 12)
 
-    return vbox, (default_profile_combo, open_in_last_opened_check, open_in_last_rendered_check, undo_max_spin, load_order_combo)
+    # Aug-2019 - SvdB - AS - Added autosave_combo
+    return vbox, (default_profile_combo, open_in_last_opened_check, open_in_last_rendered_check, undo_max_spin, load_order_combo, autosave_combo)
 
 def _edit_prefs_panel():
     prefs = editorpersistance.prefs
@@ -148,16 +156,6 @@ def _edit_prefs_panel():
     gfx_length_spin.set_adjustment(spin_adj)
     gfx_length_spin.set_numeric(True)
 
-    """
-    overwrite_clip_drop = Gtk.ComboBoxText()
-    active = 0
-    if prefs.overwrite_clip_drop == False:
-        active = 1
-    overwrite_clip_drop.append_text(_("Overwrite blanks"))
-    overwrite_clip_drop.append_text(_("Always insert"))
-    overwrite_clip_drop.set_active(active)
-    """
-    
     kf_edit_playhead_move = Gtk.CheckButton()
     kf_edit_playhead_move.set_active(prefs.kf_edit_init_affects_playhead)
 
@@ -179,20 +177,28 @@ def _edit_prefs_panel():
     hor_scroll_dir.append_text(_("Scroll Up Forward"))
     hor_scroll_dir.append_text(_("Scroll Down Forward"))
     hor_scroll_dir.set_active(active)
-            
+
+    active = 0
+    if prefs.single_click_effects_editor_load == True:
+        active = 1
+    effects_editor_clip_load = Gtk.ComboBoxText()
+    effects_editor_clip_load.append_text(_("On Double Click"))
+    effects_editor_clip_load.append_text(_("On Single Click"))
+    effects_editor_clip_load.set_active(active)
+    
     hide_file_ext_button = Gtk.CheckButton()
     if hasattr(prefs, 'hide_file_ext'):
         hide_file_ext_button.set_active(prefs.hide_file_ext)
     
     # Layout
     row4 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Graphics default length:")), gfx_length_spin, PREFERENCES_LEFT))
-    #row8 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Media drag'n'drop action on non-V1 tracks:")), overwrite_clip_drop, PREFERENCES_LEFT))
     row9 = _row(guiutils.get_checkbox_row_box(cover_delete, Gtk.Label(label=_("Cover Transition/Fade clips on delete if possible"))))
     # Jul-2016 - SvdB - For play_pause button
     row11 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Mouse Middle Button Scroll Action:")), mouse_scroll_action, PREFERENCES_LEFT))
     row13 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Mouse Horizontal Scroll Direction:")), hor_scroll_dir, PREFERENCES_LEFT))
     row14 = _row(guiutils.get_checkbox_row_box(kf_edit_playhead_move, Gtk.Label(label=_("Move Playhead to Clip start on keyframe edit init"))))
     row12 = _row(guiutils.get_checkbox_row_box(hide_file_ext_button, Gtk.Label(label=_("Hide file extensions when importing Clips"))))
+    row15 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Open Clip in Effects Editor")), effects_editor_clip_load, PREFERENCES_LEFT))
     # Apr-2017 - SvdB - For Fast Forward / Reverse options
     
     vbox = Gtk.VBox(False, 2)
@@ -203,6 +209,7 @@ def _edit_prefs_panel():
     vbox.pack_start(row13, False, False, 0)
     vbox.pack_start(row14, False, False, 0)
     vbox.pack_start(row12, False, False, 0)
+    vbox.pack_start(row15, False, False, 0)
     vbox.pack_start(Gtk.Label(), True, True, 0)
 
     guiutils.set_margins(vbox, 12, 0, 12, 12)
@@ -210,7 +217,8 @@ def _edit_prefs_panel():
     # Jul-2016 - SvdB - Added play_pause_button
     # Apr-2017 - SvdB - Added ffwd / rev values
     return vbox, (gfx_length_spin, cover_delete,
-                  mouse_scroll_action, hide_file_ext_button, hor_scroll_dir, kf_edit_playhead_move)
+                  mouse_scroll_action, hide_file_ext_button, hor_scroll_dir, 
+                  kf_edit_playhead_move, effects_editor_clip_load)
 
 def _playback_prefs_panel():
     prefs = editorpersistance.prefs
@@ -259,9 +267,7 @@ def _playback_prefs_panel():
     loop_clips = Gtk.CheckButton()
     loop_clips.set_active(prefs.loop_clips)
 
-     
     # Layout
-    #row1 = _row(guiutils.get_checkbox_row_box(auto_play_in_clip_monitor, Gtk.Label(label=_("Autoplay new Clips in Clip Monitor"))))
     row2 = _row(guiutils.get_checkbox_row_box(auto_center_on_stop, Gtk.Label(label=_("Center Current Frame on Playback Stop"))))
     row13 = _row(guiutils.get_checkbox_row_box(auto_center_on_updown, Gtk.Label(label=_("Center Current Frame after Up/Down Arrow"))))
     # Jul-2016 - SvdB - For play_pause button
@@ -373,13 +379,25 @@ def _view_prefs_panel():
     tracks_combo = Gtk.ComboBoxText()
     tracks_combo.append_text(_("Normal - 50px, 25px"))
     tracks_combo.append_text(_("Double for HiDPI - 100px, 50px"))
+    # Aug-2019 - SvdB - BB
     tracks_combo.set_active(prefs.double_track_hights)
 
     top_row_layout = Gtk.ComboBoxText()
     top_row_layout.append_text(_("3 panels if width (1450px+) available"))
     top_row_layout.append_text(_("2 panels always"))
     top_row_layout.set_active(prefs.top_row_layout)
-        
+
+    monitors_data = utils.get_display_monitors_size_data()
+    layout_monitor = Gtk.ComboBoxText()
+    combined_w, combined_h = monitors_data[0]
+    layout_monitor.append_text(_("Full Display area: ") + str(combined_w) + " x " + str(combined_h))
+    if len(monitors_data) >= 3:
+        for monitor_index in range(1, len(monitors_data)):
+            monitor_w, monitor_h = monitors_data[monitor_index]
+            layout_monitor.append_text(_("Monitor ") + str(monitor_index) + ": " + str(monitor_w) + " x " + str(monitor_h))
+    layout_monitor.set_active(prefs.layout_display_index)
+
+
     # Layout
     row00 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Application window mode:")), window_mode_combo, PREFERENCES_LEFT))
     #row0 = _row(guiutils.get_checkbox_row_box(force_english_check, Gtk.Label(label=_("Use English texts on localized OS"))))
@@ -390,15 +408,15 @@ def _view_prefs_panel():
     row4 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Theme detection fail fallback colors:")), theme_combo, PREFERENCES_LEFT))
     row5 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Default audio levels display:")), audio_levels_combo, PREFERENCES_LEFT))
     row7 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Tracks Heights:")), tracks_combo, PREFERENCES_LEFT))
-
     # Feb-2017 - SvdB - For full file names
     row6 =  _row(guiutils.get_checkbox_row_box(show_full_file_names, Gtk.Label(label=_("Show Full File names"))))
-
     row8 =  _row(guiutils.get_two_column_box(Gtk.Label(label=_("Top row layout:")), top_row_layout, PREFERENCES_LEFT))
-
+    
+    row10 = _row(guiutils.get_two_column_box(Gtk.Label(label=_("Do GUI layout based on:")), layout_monitor, PREFERENCES_LEFT))
+    
     vbox = Gtk.VBox(False, 2)
     vbox.pack_start(row00, False, False, 0)
-    #vbox.pack_start(row0, False, False, 0)
+    vbox.pack_start(row10, False, False, 0)
     vbox.pack_start(row9, False, False, 0)
     vbox.pack_start(row1, False, False, 0)
     vbox.pack_start(row2, False, False, 0)
@@ -415,7 +433,7 @@ def _view_prefs_panel():
 
     # Feb-2017 - SvdB - Added code for full file names
     return vbox, (force_language_combo, display_splash_check, buttons_combo, dark_combo, theme_combo, audio_levels_combo, 
-                  window_mode_combo, show_full_file_names, tracks_combo, top_row_layout)
+                  window_mode_combo, show_full_file_names, tracks_combo, top_row_layout, layout_monitor)
 
 def _performance_panel():
     # Jan-2017 - SvdB

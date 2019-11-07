@@ -27,9 +27,11 @@ from gi.repository import Gtk, Gdk
 import pickle
 
 import appconsts
+import atomicfile
 import editorpersistance
 import respaths
 import userfolders
+import utils
 
 
 # Editor window
@@ -55,18 +57,16 @@ render_out_folder = None
 
 # Media tab
 media_view_filter_selector = None
-#proxy_button = None
 
 # Monitor
 pos_bar = None
-tc = None
 
 # Timeline
 tline_display = None
 tline_scale = None
 tline_canvas = None
 tline_scroll = None
-tline_info = None
+tline_info = None # Shows save icon
 tline_column = None
 tline_left_corner = None
 big_tc = None
@@ -101,7 +101,7 @@ def capture_references(new_editor_window):
     Create shorter names for some of the frequently used GUI objects.
     """
     global editor_window, media_list_view, bin_list_view, sequence_list_view, pos_bar, \
-    tc, tline_display, tline_scale, tline_canvas, tline_scroll, tline_v_scroll, tline_info, \
+    tline_display, tline_scale, tline_canvas, tline_scroll, tline_v_scroll, tline_info, \
     tline_column, play_b, \
     effect_select_list_view, effect_select_combo_box, project_info_vbox, middle_notebook, big_tc, editmenu, notebook_buttons, tline_left_corner, \
     monitor_widget, bin_panel, monitor_switch
@@ -119,7 +119,6 @@ def capture_references(new_editor_window):
     effect_select_combo_box = editor_window.effect_select_combo_box
 
     pos_bar = editor_window.pos_bar
-    tc = editor_window.tc
 
     monitor_widget = editor_window.monitor_widget
     monitor_switch = editor_window.monitor_switch
@@ -165,14 +164,14 @@ def set_theme_colors():
 
     r, g, b, a = unpack_gdk_color(sel_bg_color)
     if r == 0.0 and g == 0.0 and b == 0.0:
-        print "Selected color NOT detected"
+        print("Selected color NOT detected")
         if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
             c = theme_colors[2]
         else:
             c = theme_colors[3]
         _selected_bg_color = Gdk.RGBA(*c)
     else:
-        print "Selected color detected"
+        print("Selected color detected")
         _selected_bg_color = sel_bg_color
 
     # Try to detect bg color and set frow fallback if fails
@@ -184,7 +183,7 @@ def set_theme_colors():
     r, g, b, a = unpack_gdk_color(bg_color)
 
     if r == 0.0 and g == 0.0 and b == 0.0:
-        print "BG color NOT detected"
+        print("BG color NOT detected")
         if editorpersistance.prefs.theme == appconsts.LIGHT_THEME:
             c = theme_colors[0]
         else:
@@ -192,7 +191,7 @@ def set_theme_colors():
         _bg_color = Gdk.RGBA(*c)
         _button_colors = Gdk.RGBA(*c)
     else:
-        print "BG color detected"
+        print("BG color detected")
         _bg_color = bg_color
         _button_colors = bg_color
 
@@ -222,13 +221,14 @@ def save_current_colors():
     # Used to communicate theme colors to tools like gmic.py running on separate process
     colors = (unpack_gdk_color(_selected_bg_color), unpack_gdk_color(_bg_color), unpack_gdk_color(_button_colors))
     save_file_path = _colors_data_path()
-    write_file = file(save_file_path, "wb")
-    pickle.dump(colors, write_file)
+    with atomicfile.AtomicFileWriter(save_file_path, "wb") as afw:
+        write_file = afw.get_file()
+        pickle.dump(colors, write_file)
 
 def load_current_colors():
     load_path = _colors_data_path()
-    f = open(load_path)
-    colors = pickle.load(f)
+    colors = utils.unpickle(load_path)
+    
     sel, bg, button = colors
     global _selected_bg_color, _bg_color, _button_colors
     _selected_bg_color = Gdk.RGBA(*sel)
@@ -246,14 +246,14 @@ def _print_widget(widget): # debug
     path_str = path_str.replace("horizontal","")
     path_str = path_str.replace("[1/2]","")
     path_str = path_str.replace("GtkVBox:. GtkVPaned:[2/2]. GtkHBox:. GtkHPaned:. GtkVBox:. GtkNotebook:[1/1]","notebook:")
-    print path_str
+    print(path_str)
 
 def apply_gtk_css():
     gtk_version = "%s.%s.%s" % (Gtk.get_major_version(), Gtk.get_minor_version(), Gtk.get_micro_version())
     if Gtk.get_major_version() == 3 and Gtk.get_minor_version() >= 22:
-        print "Gtk version is " + gtk_version + ", Flowblade theme is available."
+        print("Gtk version is " + gtk_version + ", Flowblade theme is available.")
     else:
-        print "Gtk version is " + gtk_version + ", Flowblade theme only available for Gtk >= 3.22"
+        print("Gtk version is " + gtk_version + ", Flowblade theme only available for Gtk >= 3.22")
         editorpersistance.prefs.theme = appconsts.LIGHT_THEME
         editorpersistance.save()
         return False
@@ -261,7 +261,7 @@ def apply_gtk_css():
     provider = Gtk.CssProvider.new()
     display = Gdk.Display.get_default()
     screen = display.get_default_screen()
-    Gtk.StyleContext.add_provider_for_screen (screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    Gtk.StyleContext.add_provider_for_screen (screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     provider.load_from_path(respaths.ROOT_PATH + "/res/css/gtk-flowblade-dark.css")
 
     return True

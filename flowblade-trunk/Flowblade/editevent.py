@@ -92,6 +92,8 @@ def do_multiple_clip_insert(track, clips, tline_pos):
     
     # Can't put audio media on video track
     for new_clip in clips:
+        if isinstance(new_clip, int):
+            continue
         if ((new_clip.media_type == appconsts.AUDIO)
            and (track.type == appconsts.VIDEO)):        
             _display_no_audio_on_video_msg(track)
@@ -279,7 +281,7 @@ def tline_canvas_mouse_pressed(event, frame):
     if EDIT_MODE() == editorstate.CLIP_END_DRAG:
         modesetting.set_default_edit_mode()
         # This shouldn't happen unless for some reason mouse release didn't hit clipenddragmode listener.
-        print "EDIT_MODE() == editorstate.CLIP_END_DRAG at mouse press!"
+        print("EDIT_MODE() == editorstate.CLIP_END_DRAG at mouse press!")
 
     #  Check if match frame close is hit
     if editorstate.current_is_move_mode() and timeline_visible():
@@ -290,9 +292,15 @@ def tline_canvas_mouse_pressed(event, frame):
 
     #  Check if compositor is hit and if so, handle compositor editing
     if editorstate.current_is_move_mode() and timeline_visible():
-        hit_compositor = tlinewidgets.compositor_hit(frame, event.y, current_sequence().compositors)
-        if hit_compositor != None:         
-            if editorstate.auto_follow == False or hit_compositor.obey_autofollow == False:
+        hit_compositor = tlinewidgets.compositor_hit(frame, event.x, event.y, current_sequence().compositors)
+        if hit_compositor != None:
+            if editorstate.get_compositing_mode() == appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW:
+                compositeeditor.set_compositor(hit_compositor)
+                compositormodes.set_compositor_selected(hit_compositor)
+                movemodes.clear_selected_clips()
+                editorstate.timeline_mouse_disabled = True
+                return
+            elif editorstate.auto_follow_active() == False or hit_compositor.obey_autofollow == False:
                 movemodes.clear_selected_clips()
                 if event.button == 1 or (event.button == 3 and event.get_state() & Gdk.ModifierType.CONTROL_MASK):
                     compositormodes.set_compositor_mode(hit_compositor)
@@ -430,7 +438,7 @@ def tline_canvas_double_click(frame, x, y):
         modesetting.set_default_edit_mode()
         return
 
-    hit_compositor = tlinewidgets.compositor_hit(frame, y, current_sequence().compositors)
+    hit_compositor = tlinewidgets.compositor_hit(frame, x, y, current_sequence().compositors)
     if hit_compositor != None:
         compositeeditor.set_compositor(hit_compositor)
         return
@@ -506,7 +514,7 @@ def tline_media_drop(media_file, x, y, use_marks=False):
             #       ...but then we would need to patch persistance.py...maybe keep this even if not too smart.
             # TODO: Make default length user settable or use graphics value
             if (hasattr(new_clip, 'mark_in') == False) or (new_clip.mark_in == -1 and new_clip.mark_out == -1):
-                center_frame = new_clip.get_length() / 2
+                center_frame = new_clip.get_length() // 2
                 default_length_half = 75
                 mark_in = center_frame - default_length_half
                 mark_out = center_frame + default_length_half - 1

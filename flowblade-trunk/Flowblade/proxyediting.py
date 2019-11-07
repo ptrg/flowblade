@@ -30,6 +30,7 @@ from gi.repository import Gtk, Gdk
 
 import app
 import appconsts
+import atomicfile
 import dialogs
 import dialogutils
 import editorpersistance
@@ -75,7 +76,7 @@ class ProxyRenderRunnerThread(threading.Thread):
         proxy_encoding = _get_proxy_encoding()
         self.current_render_file_path = None
         
-        print "proxy render started, items: " + str(len(self.files_to_render)) + ", dim: " + str(proxy_w) + "x" + str(proxy_h)
+        print("proxy render started, items: " + str(len(self.files_to_render)) + ", dim: " + str(proxy_w) + "x" + str(proxy_h))
         
         for media_file in self.files_to_render:
             if self.aborted == True:
@@ -145,7 +146,7 @@ class ProxyRenderRunnerThread(threading.Thread):
                 progress_window.update_render_progress(0, media_file.name, items, len(self.files_to_render), elapsed)
                 Gdk.threads_leave()
             else:
-                print "proxy render aborted"
+                print("proxy render aborted")
                 render_thread.shutdown()
                 break
 
@@ -163,7 +164,7 @@ class ProxyRenderRunnerThread(threading.Thread):
         if editorstate.PROJECT().proxy_data.proxy_mode == appconsts.USE_PROXY_MEDIA:
             _auto_re_convert_after_proxy_render_in_proxy_mode()
         
-        print "proxy render done"
+        print("proxy render done")
 
     def _create_img_seq_proxy(self, media_file, proxy_w, proxy_h, items, start):
         now = time.time()
@@ -192,7 +193,7 @@ class ProxyRenderRunnerThread(threading.Thread):
                 im.thumbnail(size, Image.ANTIALIAS)
                 im.save(copyfolder + "/" + orig_file_name, "PNG")
             except IOError:
-                print "proxy img seq frame failed for '%s'" % orig_path
+                print("proxy img seq frame failed for '%s'" % orig_path)
 
             done = done + 1
         
@@ -217,7 +218,7 @@ class ProxyManagerDialog:
     def __init__(self):
         self.dialog = Gtk.Dialog(_("Proxy Manager"), gui.editor_window.window,
                             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                            (_("Close Manager").encode('utf-8'), Gtk.ResponseType.CLOSE))
+                            (_("Close Manager"), Gtk.ResponseType.CLOSE))
 
         # Encoding
         self.enc_select = Gtk.ComboBoxText()
@@ -262,7 +263,7 @@ class ProxyManagerDialog:
         media_files = editorstate.PROJECT().media_files
         video_files = 0
         proxy_files = 0
-        for k, media_file in media_files.iteritems():
+        for k, media_file in media_files.items():
             if media_file.type == appconsts.VIDEO:
                 video_files = video_files + 1
                 if media_file.has_proxy_file == True or media_file.is_proxy_file == True:
@@ -352,7 +353,7 @@ class ProxyRenderProgressDialog:
         self.dialog = Gtk.Dialog(_("Creating Proxy Files"),
                                  gui.editor_window.window,
                                  Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                                 (_("Stop").encode('utf-8'), Gtk.ResponseType.REJECT))
+                                 (_("Stop"), Gtk.ResponseType.REJECT))
         
         self.render_progress_bar = Gtk.ProgressBar()
         self.render_progress_bar.set_text("0 %")
@@ -419,7 +420,7 @@ class ProxyRenderIssuesWindow:
             self.dialog = Gtk.Dialog(dialog_title,
                                      gui.editor_window.window,
                                      Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                                     (_("Close").encode('utf-8'), Gtk.ResponseType.CLOSE))
+                                     (_("Close"), Gtk.ResponseType.CLOSE))
             info_box = dialogutils.get_warning_message_dialog_panel(_("Nothing will be rendered"), 
                                                                       _("No video files were selected.\nOnly video files can have proxy files."),
                                                                       True)
@@ -428,8 +429,8 @@ class ProxyRenderIssuesWindow:
             self.dialog = Gtk.Dialog(dialog_title,
                                      gui.editor_window.window,
                                      Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                                     (_("Cancel").encode('utf-8'), Gtk.ResponseType.CANCEL,
-                                      _("Do Render Action" ).encode('utf-8'), Gtk.ResponseType.OK))
+                                     (_("Cancel"), Gtk.ResponseType.CANCEL,
+                                      _("Do Render Action" ), Gtk.ResponseType.OK))
             self.dialog.connect('response', self.response)
 
             rows = ""
@@ -628,8 +629,8 @@ def _get_proxy_dimensions(project_profile, proxy_size):
 
     old_width_half = int(project_profile.width() * size_mult)
     old_height_half = int(project_profile.height() * size_mult)
-    new_width = old_width_half - old_width_half % 8
-    new_height = old_height_half - old_height_half % 8
+    new_width = old_width_half - old_width_half % 2
+    new_height = old_height_half - old_height_half % 2
     return (new_width, new_height)
 
 def _get_proxy_profile(project):
@@ -648,10 +649,10 @@ def _get_proxy_profile(project):
     file_contents += "display_aspect_den=" + str(project_profile.display_aspect_den()) + "\n"
 
     proxy_profile_path = userfolders.get_cache_dir() + "temp_proxy_profile"
-    profile_file = open(proxy_profile_path, "w")
-    profile_file.write(file_contents)
-    profile_file.close()
-    
+    with atomicfile.AtomicFileWriter(proxy_profile_path, "w") as afw:
+        profile_file = afw.get_file()
+        profile_file.write(file_contents)
+
     proxy_profile = mlt.Profile(proxy_profile_path)
     return proxy_profile
 
@@ -760,7 +761,7 @@ class ProxyProjectLoadThread(threading.Thread):
             sequence.set_track_counts(project)
             Gdk.threads_leave()
         except persistance.FileProducerNotFoundError as e:
-            print "did not find file:", e
+            print("did not find file:", e)
 
         pulse_runner.running = False
         time.sleep(0.3) # need to be sure pulse_runner has stopped

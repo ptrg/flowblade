@@ -25,11 +25,12 @@ import time
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gdk
 
 import math
-import md5
+import hashlib
 import os
+import pickle
 import re
 import threading
 import xml.dom.minidom
@@ -384,7 +385,7 @@ def is_mlt_xml_file(file_path):
 def hex_to_rgb(value):
     value = value.lstrip('#')
     lv = len(value)
-    return tuple(int(value[i:i+lv/3], 16) for i in range(0, lv, lv/3))
+    return tuple(int(value[i:i+lv//3], 16) for i in range(0, lv, lv//3))
 
 def int_to_hex_str(n):
     val = int_to_hex(n)
@@ -434,7 +435,7 @@ def do_nothing():
 def get_unique_name_for_audio_levels_file(media_file_path, profile):
     size_str = str(os.path.getsize(media_file_path))
     fps_str = str(profile.description())
-    file_name = md5.new(media_file_path + size_str + fps_str).hexdigest()
+    file_name = hashlib.md5((media_file_path + size_str + fps_str).encode('utf-8')).hexdigest()
     return file_name
 
 def get_img_seq_glob_lookup_name(asset_file_name):
@@ -444,7 +445,7 @@ def get_img_seq_glob_lookup_name(asset_file_name):
     try:
         end = end.split("?")[0]
     except:
-        print "old style img seq name for " + asset_file_name
+        print("old style img seq name for " + asset_file_name)
     
     return start + "*" + end
 
@@ -517,7 +518,7 @@ def update_xml_file_producer_info(resource, info):
     info["fps_den"] = float(profile_node.getAttribute("frame_rate_den"))
     info["progressive"] = int(profile_node.getAttribute("progressive"))
     
-    print info
+    print(info)
     #  <profile description="HD 720p 29.97 fps" width="1280" height="720" progressive="1" sample_aspect_num="1" sample_aspect_den="1" display_aspect_num="16" display_aspect_den="9" frame_rate_num="30000" frame_rate_den="1001" colorspace="0"/>
     
 def is_media_file(file_path):
@@ -659,7 +660,7 @@ _video_file_extensions = [  "avi",
 def start_timing(msg="start timing"):
     global _start_time
     _start_time = time.time()
-    print msg
+    print(msg)
 
 def elapsed_time(msg="elapsed: ", show_in_millis=True):
     elapsed_time = time.time() - _start_time
@@ -669,5 +670,31 @@ def elapsed_time(msg="elapsed: ", show_in_millis=True):
     else:
         unit = "s"
     
-    print msg + " " + str(elapsed_time) + " " + unit
+    print(msg + " " + str(elapsed_time) + " " + unit)
 
+def get_display_monitors_size_data():
+    monitors_size_data = []
+    
+    display = Gdk.Display.get_default()
+    scr_w = Gdk.Screen.width()
+    scr_h = Gdk.Screen.height()
+    monitors_size_data.append((scr_w, scr_h))
+        
+    num_monitors = display.get_n_monitors() # Get number of monitors.
+    if num_monitors == 1:
+        return monitors_size_data
+    else:
+        for monitor_index in range(0, num_monitors):
+            monitor = display.get_monitor(monitor_index)
+            geom = monitor.get_geometry()
+            monitors_size_data.append((geom.width, geom.height))
+        
+        return monitors_size_data
+
+def unpickle(path):
+    try:
+        f = open(path, "rb")
+        return pickle.load(f)
+    except:
+        f = open(path, 'rb')
+        return pickle.load(f, encoding='latin1') 

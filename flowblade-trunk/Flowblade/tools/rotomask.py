@@ -44,27 +44,27 @@ VIEW_EDITOR_HEIGHT = 620
 def show_rotomask(mlt_filter, editable_properties, property_editor_widgets_create_func, value_labels):
     
     # Create custom keyframe editor for spline
-    kf_json_prop = filter(lambda ep: ep.name == "spline", editable_properties)[0]
+    kf_json_prop = [ep for ep in editable_properties if ep.name == "spline"][0]
     kf_editor = keyframeeditor.RotoMaskKeyFrameEditor(kf_json_prop, propertyparse.rotomask_json_value_string_to_kf_array)
 
     # Use lambda to monkeypatch other editable properties to update rotomask on value write 
-    invert_prop = filter(lambda ep: ep.name == "invert", editable_properties)[0]
+    invert_prop = [ep for ep in editable_properties if ep.name == "invert"][0]
     invert_prop.write_val_func = invert_prop.write_value
     invert_prop.write_value = lambda value_str: _write_val_and_update_editor(invert_prop, value_str)
 
-    feather_prop = filter(lambda ep: ep.name == "feather", editable_properties)[0]
+    feather_prop = [ep for ep in editable_properties if ep.name == "feather"][0]
     feather_prop.write_val_func = feather_prop.write_value
     feather_prop.write_value = lambda value_str: _write_val_and_update_editor(feather_prop, value_str)
     
-    feather_passes_prop = filter(lambda ep: ep.name == "feather_passes", editable_properties)[0]
+    feather_passes_prop = [ep for ep in editable_properties if ep.name == "feather_passes"][0]
     feather_passes_prop.write_val_func = feather_passes_prop.write_value
     feather_passes_prop.write_value = lambda value_str: _write_val_and_update_editor(feather_passes_prop, value_str)
     
-    alpha_operation_prop = filter(lambda ep: ep.name == "alpha_operation", editable_properties)[0]
+    alpha_operation_prop = [ep for ep in editable_properties if ep.name == "alpha_operation"][0]
     alpha_operation_prop.write_val_func = alpha_operation_prop.write_value
     alpha_operation_prop.write_value = lambda value_str: _write_val_and_update_editor(alpha_operation_prop, value_str)
 
-    mode_prop = filter(lambda ep: ep.name == "mode", editable_properties)[0]
+    mode_prop = [ep for ep in editable_properties if ep.name == "mode"][0]
     mode_prop.write_val_func = mode_prop.write_value
     mode_prop.write_value = lambda value_str: _write_val_and_update_editor(mode_prop, value_str)
     
@@ -109,6 +109,7 @@ class RotoMaskEditor(Gtk.Window):
         editor_widgets = property_editor_widgets_create_func()
         
         self.block_updates = False
+        self.mask_create_freeze = False # We are not allowing user to change acrive kf when creating mask
 
         self.kf_editor = kf_editor
         self.kf_editor.set_parent_editor(self)
@@ -220,6 +221,10 @@ class RotoMaskEditor(Gtk.Window):
         self.connect("key-press-event", self.key_down)
         self.window_resized()
 
+        self.kf_editor.clip_editor.maybe_set_first_kf_in_clip_area_active()
+
+        self.update_mask_create_freeze_gui()
+
     def mask_type_selection_changed(self, combo_box):
         if combo_box.get_active() == 0:
             self.roto_mask_layer.edit_point_shape.set_mask_type(vieweditorshape.CURVE_MASK)
@@ -320,3 +325,14 @@ class RotoMaskEditor(Gtk.Window):
             
         # Key event was not handled here.
         return False
+
+    def update_mask_create_freeze_gui(self):
+        if self.roto_mask_layer.edit_point_shape.closed == True:
+            self.mask_create_freeze = False
+        elif len(self.roto_mask_layer.edit_point_shape.curve_points) == 0:
+            self.mask_create_freeze = False
+        else:
+            self.mask_create_freeze = True
+
+        self.kf_editor.set_editor_sensitive(not self.mask_create_freeze)
+                

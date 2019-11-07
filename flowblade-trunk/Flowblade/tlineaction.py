@@ -27,7 +27,7 @@ Module handles button edit events from buttons in the middle bar.
 from gi.repository import Gtk
 from gi.repository import Gdk
 
-import md5
+import hashlib
 import os
 from operator import itemgetter
 import threading
@@ -71,8 +71,8 @@ import utils
 
 
 # values for differentiating copy paste data
-COPY_PASTA_DATA_CLIPS = 1
-COPY_PASTA_DATA_COMPOSITOR_PROPERTIES = 2
+COPY_PASTE_DATA_CLIPS = appconsts.COPY_PASTE_DATA_CLIPS
+COPY_PASTE_DATA_COMPOSITOR_PROPERTIES = appconsts.COPY_PASTE_DATA_COMPOSITOR_PROPERTIES
 
 # Used to store transition render data to be used at render complete callback
 transition_render_data = None
@@ -137,11 +137,11 @@ def cut_pressed():
         index = track.get_clip_index_at(int(tline_frame))
         try:
             clip = track.clips[index]            
-            # don't cut blanck clip
+            # don't cut blanck clips
             if clip.is_blanck_clip:
                 continue
         except Exception:
-            continue # Frame after last clip in track
+            continue # Frame is after last clip in track
 
         # Get cut frame in clip frames
         clip_start_in_tline = track.clip_start(index)
@@ -192,8 +192,8 @@ def sequence_split_pressed():
     # before we start we will ask the user whether he really wants to do, what he
     # just asked for. The intention of this is to provide some more background
     # information
-    heading = _("Split to new Sequence at Playhead Position")
-    info = _("Do you realy want to split this sequence into two?\nThis will create a new sequence receiving righthand content of your currently active sequence. Also the same content will be removed from your currently active sequence.\nThe newly created sequence will be opened.\n\n Continue?")
+    heading = _("Confirm split to new Sequence at Playhead position")
+    info = _("This will create a new sequence from the part after playhead. That part will be removed from\nyour current active sequence.\n\nThe newly created sequence will be opened as current sequence.")
     dialogutils.warning_confirmation(split_confirmed, heading, info, gui.editor_window.window)
 
 def split_confirmed(dialog, response_id):
@@ -458,7 +458,7 @@ def _attempt_clip_cover_delete(clip, track, index):
         cover_to_clip = track.clips[movemodes.selected_range_in + 1]
         
         real_length = clip.get_length()
-        to_part = real_length / 2
+        to_part = real_length // 2
         from_part = real_length - to_part
     
         if to_part > cover_to_clip.clip_in:
@@ -517,7 +517,7 @@ def lift_button_pressed():
 
 
 def ripple_delete_button_pressed():
-    print "Ripple delete"
+    print("Ripple delete")
     if movemodes.selected_track == -1:
         return
 
@@ -835,57 +835,15 @@ def split_audio_button_pressed():
     syncsplitevent.split_audio_from_clips_list(clips, track)
 
 def sync_all_compositors():
-    full_sync_data = edit.get_full_compositor_sync_data()
+    full_sync_data, orphaned_compositors = edit.get_full_compositor_sync_data()
     
     for sync_item in full_sync_data:
-        destroy_id, orig_in, orig_out, clip_start, clip_end = sync_item
+        destroy_id, orig_in, orig_out, clip_start, clip_end, clip_track, orig_compositor_track = sync_item
         compositor = current_sequence().get_compositor_for_destroy_id(destroy_id)
         data = {"compositor":compositor,"clip_in":clip_start,"clip_out":clip_end}
         action = edit.move_compositor_action(data)
         action.do_edit()
 
-    """
-    # Pair all compositors with their origin clips ids
-    comp_clip_pairings = {}
-    for compositor in current_sequence().compositors:
-        if compositor.origin_clip_id in comp_clip_pairings:
-            comp_clip_pairings[compositor.origin_clip_id].append(compositor)
-        else:
-            comp_clip_pairings[compositor.origin_clip_id] = [compositor]
-    
-    # Create resync list
-    resync_list = []
-    for i in range(current_sequence().first_video_index, len(current_sequence().tracks) - 1): # -1, there is a topmost hidden track 
-        track = current_sequence().tracks[i] # b_track is source track where origin clip is
-        for j in range(0, len(track.clips)):
-            clip = track.clips[j]
-            if clip.id in comp_clip_pairings:
-                compositor_list = comp_clip_pairings[clip.id]
-                for compositor in compositor_list:
-                    resync_list.append((clip, track, j, compositor))
-                    
-    # Do sync
-    for resync_item in resync_list:
-        try:
-            clip, track, clip_index, compositor = resync_item
-            clip_start = track.clip_start(clip_index)
-            clip_end = clip_start + clip.clip_out - clip.clip_in
-            
-            # Auto fades need to go to start or end of clips and maintain their lengths
-            if compositor.transition.info.auto_fade_compositor == True:
-                if compositor.transition.info.name == "##auto_fade_in":
-                    clip_end = clip_start + compositor.get_length() - 1
-                else:
-                    clip_start = clip_end - compositor.get_length() + 1
-            
-            data = {"compositor":compositor,"clip_in":clip_start,"clip_out":clip_end}
-            action = edit.move_compositor_action(data)
-            action.do_edit()
-        except:
-            # Clip is probably deleted
-            pass
-    """
-    
 def add_transition_menu_item_selected():
     if movemodes.selected_track == -1:
         # INFOWINDOW
@@ -899,7 +857,7 @@ def add_transition_menu_item_selected():
     
 def add_fade_menu_item_selected():
     if movemodes.selected_track == -1:
-        print "so selection track"
+        print("so selection track")
         # INFOWINDOW
         return
 
@@ -911,7 +869,7 @@ def add_fade_menu_item_selected():
 
 def add_transition_pressed(retry_from_render_folder_select=False):
     if movemodes.selected_track == -1:
-        print "so selection track"
+        print("so selection track")
         # INFOWINDOW
         return
 
@@ -920,7 +878,7 @@ def add_transition_pressed(retry_from_render_folder_select=False):
 
     if not ((clip_count == 2) or (clip_count == 1)):
         # INFOWINDOW
-        print "clip count"
+        print("clip count")
         return
 
     if track.id < current_sequence().first_video_index and clip_count == 1:
@@ -990,10 +948,10 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
 
     try:
         length = int(length_entry.get_text())
-    except Exception, e:
+    except Exception as e:
         # INFOWINDOW, bad input
-        print str(e)
-        print "entry"
+        print(str(e))
+        print("entry")
         return
 
     dialog.destroy()
@@ -1007,7 +965,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
     # Get values to build transition render sequence
     # Divide transition lenght between clips, odd frame goes to from_clip 
     real_length = length + 1 # first frame is 100% from clip frame so we are going to have to drop that
-    to_part = real_length / 2
+    to_part = real_length // 2
     from_part = real_length - to_part
 
     # HACKFIX, I just tested this till it worked, not entirely sure on math here
@@ -1072,7 +1030,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
                                                 window_text)
 
 def _transition_render_complete(clip_path):
-    print "Render complete"
+    print("Render complete")
 
     global transition_render_data
     transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data = transition_render_data
@@ -1270,10 +1228,10 @@ def _add_fade_dialog_callback(dialog, response_id, selection_widgets, transition
 
     try:
         length = int(length_entry.get_text())
-    except Exception, e:
+    except Exception as e:
         # INFOWINDOW, bad input
-        print str(e)
-        print "entry"
+        print(str(e))
+        print("entry")
         return
 
     dialog.destroy()
@@ -1312,7 +1270,7 @@ def _add_fade_dialog_callback(dialog, response_id, selection_widgets, transition
                                                                         transition_type_selection_index,
                                                                         None,
                                                                         color_str)
-    print "producer_tractor length:" + str(producer_tractor.get_length())
+    print("producer_tractor length:" + str(producer_tractor.get_length()))
 
     # Creation data struct needs to have same members for transitions and fades, hence a lot of None here.
     # Used for rerender functionality.
@@ -1421,7 +1379,7 @@ def _fade_RE_render_dialog_callback(dialog, response_id, selection_widgets, fade
                                                                         transition_type_index,
                                                                         None,
                                                                         color_str)
-    print "producer_tractor length:" + str(producer_tractor.get_length())
+    print("producer_tractor length:" + str(producer_tractor.get_length()))
 
     fade_clip_index = track.clips.index(orig_fade_clip)
     
@@ -1511,10 +1469,10 @@ class ReRenderderAllWindow:
         self.rerender_list = rerender_list
         self.rendered_items = []
         self.encoding_selections = encoding_selections
-        self.dialog = Gtk.Dialog(_("Rerender all Rendered Transitions / Fades").encode('utf-8'),
+        self.dialog = Gtk.Dialog(_("Rerender all Rendered Transitions / Fades"),
                          gui.editor_window.window,
                          Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                         (_("Cancel").encode('utf-8'), Gtk.ResponseType.REJECT))
+                         (_("Cancel"), Gtk.ResponseType.REJECT))
         self.current_item = 0
         self.runner_thread = None
         self.renderer = None
@@ -1567,7 +1525,7 @@ class ReRenderderAllWindow:
         # Dreate render consumer
         profile = PROJECT().profile
         folder = userfolders.get_render_dir()
-        file_name = md5.new(str(os.urandom(32))).hexdigest()
+        file_name = hashlib.md5(str(os.urandom(32)).encode('utf-8')).hexdigest()
         self.write_file = folder + "/"+ file_name + file_ext
         consumer = renderconsumer.get_render_consumer_for_encoding_and_quality(self.write_file, profile, encoding_option_index, quality_option_index)
         
@@ -1788,18 +1746,8 @@ def mouse_dragged_out(event):
 
 # --------------------------------------------------- copy/paste
 def do_timeline_objects_copy():
-    if _timeline_has_focus() == False:
-        # try to extract text to clipboard because user pressed CTRL + C
-        copy_source = gui.editor_window.window.get_focus()
-        try:
-            copy_source.copy_clipboard()
-        except:# selected widget was not a Gtk.Editable that can provide text to clipboard
-            pass
-
-        return 
-
     if compositormodes.compositor != None and compositormodes.compositor.selected == True:
-        editorstate.set_copy_paste_objects((COPY_PASTA_DATA_COMPOSITOR_PROPERTIES, compositormodes.compositor.get_copy_paste_objects()))
+        editorstate.set_copy_paste_objects((COPY_PASTE_DATA_COMPOSITOR_PROPERTIES, compositormodes.compositor.get_copy_paste_data()))
         return
         
     if movemodes.selected_track != -1:
@@ -1809,13 +1757,10 @@ def do_timeline_objects_copy():
         for i in range(movemodes.selected_range_in, movemodes.selected_range_out + 1):
             clone_clip = current_sequence().clone_track_clip(track, i)
             clone_clips.append(clone_clip)
-        editorstate.set_copy_paste_objects((COPY_PASTA_DATA_CLIPS, clone_clips))
+        editorstate.set_copy_paste_objects((COPY_PASTE_DATA_CLIPS, clone_clips))
         return
 
 def do_timeline_objects_paste():
-    if _timeline_has_focus() == False:
-        return 
-        
     track = current_sequence().get_first_active_track()
     if track == None:
         return 
@@ -1824,7 +1769,7 @@ def do_timeline_objects_paste():
         return 
     
     data_type, paste_clips = paste_objs
-    if data_type != COPY_PASTA_DATA_CLIPS:
+    if data_type != COPY_PASTE_DATA_CLIPS:
         do_compositor_data_paste(paste_objs)
         return
 
@@ -1832,9 +1777,12 @@ def do_timeline_objects_paste():
 
     new_clips = []
     for clip in paste_clips:
-        new_clip = current_sequence().create_clone_clip(clip)
+        if isinstance(clip, int): # blanks, these represented as int's.
+            new_clip = clip 
+        else: # media clips
+            new_clip = current_sequence().create_clone_clip(clip)
         new_clips.append(new_clip)
-    editorstate.set_copy_paste_objects((COPY_PASTA_DATA_CLIPS, new_clips))
+    editorstate.set_copy_paste_objects((COPY_PASTE_DATA_CLIPS, new_clips))
 
     # Paste clips
     editevent.do_multiple_clip_insert(track, paste_clips, tline_pos)
@@ -1852,7 +1800,7 @@ def do_timeline_filters_paste():
         return 
 
     data_type, paste_clips = paste_objs
-    if data_type != COPY_PASTA_DATA_CLIPS:
+    if data_type != COPY_PASTE_DATA_CLIPS:
         do_compositor_data_paste(paste_objs)
         return
         
@@ -1880,8 +1828,8 @@ def do_timeline_filters_paste():
 
 def do_compositor_data_paste(paste_objs):
     data_type, paste_data = paste_objs
-    if data_type != COPY_PASTA_DATA_COMPOSITOR_PROPERTIES:
-        print "supposed unreahcable if in do_compositor_data_paste"
+    if data_type != COPY_PASTE_DATA_COMPOSITOR_PROPERTIES:
+        print("supposed unreahcable if in do_compositor_data_paste")
         return
         
     if compositormodes.compositor != None and compositormodes.compositor.selected == True:

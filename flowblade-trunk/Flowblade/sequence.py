@@ -111,6 +111,7 @@ class Sequence:
         self.watermark_filter = None
         self.watermark_file_path = None
         self.seq_len = 0 # used in trim crash hack, remove when fixed
+        self.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
 
         # MLT objects for a multitrack sequence
         self.init_mlt_objects()
@@ -276,15 +277,19 @@ class Sequence:
 
     def _mix_audio_for_track(self, track):
         # Create and add transition to combine track audios
+        #
+        # Audio transition objects are not saved and are thrown away when track count is changed so we don't
+        # need to hold references to them in Sequence object, mltrefhold stuff is just very 
+        # defencsive programming because MLT crashes are most related to deleting stuff, probably not needed at all.
         transition = mlt.Transition(self.profile, "mix")
-        mltrefhold.hold_ref(transition)
+        mltrefhold.hold_ref(transition) # look  to remove
         transition.set("a_track", int(AUDIO_MIX_DOWN_TRACK))
         transition.set("b_track", track.id)
         transition.set("always_active", 1)
         transition.set("combine", 1)
         self.field.plant_transition(transition, int(AUDIO_MIX_DOWN_TRACK), track.id)
 
-        # Create and ad gain filter
+        # Create and add gain filter
         gain_filter = mlt.Filter(self.profile, "volume")
         mltrefhold.hold_ref(gain_filter)
         gain_filter.set("gain", str(track.audio_gain))
@@ -406,7 +411,7 @@ class Sequence:
         producer.media_type = get_media_type(path)
 
         if producer.media_type == FILE_DOES_NOT_EXIST:
-            print "file does not exist"
+            print("file does not exist")
             return None
 
         self.add_clip_attr(producer)
@@ -474,6 +479,10 @@ class Sequence:
         
     def clone_track_clip(self, track, index):
         orig_clip = track.clips[index]
+        if orig_clip.is_blanck_clip == True:
+            # Blank clips are created by adding a blank clip into MLT track and that is not approprite here,
+            # so blank clips are represent by their length as int.
+            return orig_clip.clip_length()
         return self.create_clone_clip(orig_clip)
 
     def create_clone_clip(self, clip):
@@ -626,7 +635,7 @@ class Sequence:
 
     def add_compositor(self, compositor):
         self.compositors.append(compositor)
-
+        
     def remove_compositor(self, old_compositor):
         try:
             self.compositors.remove(old_compositor)
@@ -649,12 +658,19 @@ class Sequence:
                 return comp
         raise ValueError('compositor for id not found')
 
+    def get_clip_compositors(self, clip):
+        clip_compositors = []
+        for compositor in self.compositors:
+            if compositor.origin_clip_id == clip.id:
+                clip_compositors.append(compositor)
+        return clip_compositors
+        
     def sort_compositors(self):
         """
         Compositor order must be from top to bottom or will not work.
         """
-        self.compositors.sort(_sort_compositors_comparator)
-
+        self.compositors.sort(key=_sort_compositors_comparator)
+        
     def get_track_compositors(self, track_index):
         track_compositors = []
         for comp in self.compositors:
@@ -862,22 +878,23 @@ class Sequence:
 
     def resize_tracks_to_fit(self, allocation):
         x, y, w, panel_height = allocation.x, allocation.y, allocation.width, allocation.height
-        count = 0
+        track_id = 1
         fix_next = True
         while(fix_next):
             tracks_height = self.get_tracks_height()
             if tracks_height < panel_height:
                 fix_next = False
-            elif count + 1 == self.first_video_index:
+            elif track_id == self.first_video_index:
+                # V1 should stay large and everything should still fit
+                track_id += 1
+                continue
+            elif track_id == len(self.tracks) - 2:
                 # This shold not happen because track heights should be set up so that minimized app 
-                # has enough space to display all tracks.
-                # Yet it happens sometimes, meh.
-                print "sequence.resize_tracks_to_fit (): could not make tracks fit in timeline vertical space"
                 fix_next = False
+                print("sequence.resize_tracks_to_fit (): could not make tracks fit in timeline vertical space")
             else:
-                self.tracks[1 + count].height = TRACK_HEIGHT_SMALL
-                self.tracks[len(self.tracks) - 2 - count].height = TRACK_HEIGHT_SMALL
-                count += 1
+                self.tracks[track_id].height = TRACK_HEIGHT_SMALL
+                track_id += 1
 
     def find_next_cut_frame(self, tline_frame):
         """
@@ -911,6 +928,9 @@ class Sequence:
         """
         Returns frame of next cut in active tracks relative to timeline.
         """
+        if tline_frame == 0:
+            return 0 # Rest of method fails for this special case
+        
         cut_frame = -1
         for i in range(1, len(self.tracks) - 1):
             track = self.tracks[i]
@@ -1046,15 +1066,15 @@ class Sequence:
                     clip.waveform_data = None
 
     def print_all(self):
-        print "------------------------######"
+        print("------------------------######")
         for i in range(0, len(self.tracks)):
-            print "TRACK:", i
+            print("TRACK:", i)
             self.print_track(i)
 
     def print_track(self, track_id):
         track = self.tracks[track_id]
 
-        print "PYTHON"
+        print("PYTHON")
         for i in range(0, len(track.clips)):
             clip = track.clips[i]
             if clip.is_blank():
@@ -1062,21 +1082,21 @@ class Sequence:
             else:
                 msg = clip.name
      
-            print i, ": id:", clip.id, " in:",clip.clip_in," out:", \
-            clip.clip_out, msg
+            print(i, ": id:", clip.id, " in:",clip.clip_in," out:", \
+            clip.clip_out, msg)
 
-        print "MLT"
+        print("MLT")
         for i in range(0, track.count()):
             clip = track.get_clip(i)
-            print i, " in:", clip.get_in()," out:", clip.get_out()
+            print(i, " in:", clip.get_in()," out:", clip.get_out())
 
 
     def print_compositors(self):
         for compositor in self.compositors:
-            print "---"
-            print compositor.name
-            print "a_track:" , compositor.transition.a_track
-            print "b_track:" , compositor.transition.b_track
+            print("---")
+            print(compositor.name)
+            print("a_track:" , compositor.transition.a_track)
+            print("b_track:" , compositor.transition.b_track)
 
 # ------------------------------------------------ module util methods
 def get_media_type(file_path):
@@ -1113,14 +1133,8 @@ def get_media_type(file_path):
 def _clip_length(clip):
     return clip.clip_out - clip.clip_in + 1
 
-def _sort_compositors_comparator(a_comp, b_comp):
-    # compositors on top most tracks first
-    if a_comp.transition.b_track > b_comp.transition.b_track:
-        return -1
-    elif a_comp.transition.b_track < b_comp.transition.b_track:
-        return 1
-    else:
-        return 0
+def _sort_compositors_comparator(a_comp):
+    return int(a_comp.transition.b_track)
 
 # ----------------------------- sequence cloning for tracks count change
 def create_sequence_clone_with_different_track_count(old_seq, v_tracks, a_tracks):

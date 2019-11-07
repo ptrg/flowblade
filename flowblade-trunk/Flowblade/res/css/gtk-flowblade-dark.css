@@ -1,4 +1,5 @@
 * {
+  all: unset;
   background-clip: padding-box;
   -GtkToolButton-icon-spacing: 4;
   -GtkTextView-error-underline-color: #FC4138;
@@ -247,7 +248,8 @@ button {
   padding: 2px 6px;
   color: #D3DAE3;
   border-color: #070915;
-  background-color: #222a3c ; }
+  background-image: none;
+  background-color: #222a3c; }
   button separator {
     margin: 4px 1px; }
   button.flat, button.sidebar-button {
@@ -299,7 +301,8 @@ button {
     padding-right: 5px; }
   button.text-button {
     padding-left: 12px;
-    padding-right: 12px; }
+    padding-right: 12px;
+    background-color: #222a3c;  }
   button.text-button.image-button {
     padding-left: 5px;
     padding-right: 5px; }

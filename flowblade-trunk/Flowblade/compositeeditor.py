@@ -26,6 +26,7 @@ import copy
 from gi.repository import Gtk
 import pickle
 
+import appconsts
 import atomicfile
 import compositorfades
 import dialogs
@@ -34,6 +35,7 @@ import gui
 import guicomponents
 import guiutils
 import edit
+import editorstate
 from editorstate import current_sequence
 import editorpersistance
 import keyframeeditor
@@ -120,15 +122,8 @@ def maybe_clear_editor(killed_compositor):
     if killed_compositor.destroy_id == compositor.destroy_id:
         clear_compositor()
 
-def _add_fade_in_pressed():
-    compositorfades.add_fade_in(compositor, int(widgets.fade_in_spin.get_value()))
-    # We need GUI reload to show results
-    set_compositor(compositor)
-
-def _add_fade_out_pressed():
-    compositorfades.add_fade_out(compositor, int(widgets.fade_out_spin.get_value()))
-    # We need GUI reload to show results
-    set_compositor(compositor)
+def get_compositor():
+    return compositor
 
 def _delete_compositor_pressed():
     data = {"compositor":compositor}
@@ -190,46 +185,21 @@ def _display_compositor_edit_box():
     vbox.pack_start(guicomponents.EditorSeparator().widget, False, False, 0)
 
     # Track editor
-    target_combo = guicomponents.get_compositor_track_select_combo(
-                    current_sequence().tracks[compositor.transition.b_track], 
-                    current_sequence().tracks[compositor.transition.a_track], 
-                    _target_track_changed)
+    if editorstate.get_compositing_mode() != appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW:
+        target_combo = guicomponents.get_compositor_track_select_combo(
+                        current_sequence().tracks[compositor.transition.b_track], 
+                        current_sequence().tracks[compositor.transition.a_track], 
+                        _target_track_changed)
 
-    target_row = Gtk.HBox()
-    target_row.pack_start(guiutils.get_pad_label(5, 3), False, False, 0)
-    target_row.pack_start(Gtk.Label(label=_("Destination Track:")), False, False, 0)
-    target_row.pack_start(guiutils.get_pad_label(5, 3), False, False, 0)
-    target_row.pack_start(target_combo, False, False, 0)
-    target_row.pack_start(Gtk.Label(), True, True, 0)
-    vbox.pack_start(target_row, False, False, 0)
-    vbox.pack_start(guicomponents.EditorSeparator().widget, False, False, 0)
-
-    # Fade buttons
-    compositor_info = guicomponents.CompositorInfoPanel()
-    fade_in_b = Gtk.Button(_("Add Fade In"))
-    fade_in_b.connect("clicked", lambda w,e: _add_fade_in_pressed(), None)
-
-    fade_out_b = Gtk.Button(_("Add Fade Out"))
-    fade_out_b.connect("clicked", lambda w,e: _add_fade_out_pressed(), None)
-
-    widgets.fade_in_spin = Gtk.SpinButton.new_with_range(0, 150, 1)
-    widgets.fade_in_spin.set_value(10)
-    
-    widgets.fade_out_spin = Gtk.SpinButton.new_with_range(0, 150, 1)
-    widgets.fade_out_spin.set_value(10)
-    
-    fades_row = Gtk.HBox()
-    fades_row.pack_start(guiutils.get_pad_label(5, 3), False, False, 0)
-    fades_row.pack_start(fade_in_b, False, False, 0)
-    fades_row.pack_start(widgets.fade_in_spin, False, False, 0)
-    fades_row.pack_start(fade_out_b, False, False, 0)
-    fades_row.pack_start(widgets.fade_out_spin, False, False, 0)
-    fades_row.pack_start(Gtk.Label(), True, True, 0)
-    
-    if _compositor_uses_fade_buttons(compositor) == True:
-        vbox.pack_start(fades_row, False, False, 0)
+        target_row = Gtk.HBox()
+        target_row.pack_start(guiutils.get_pad_label(5, 3), False, False, 0)
+        target_row.pack_start(Gtk.Label(label=_("Destination Track:")), False, False, 0)
+        target_row.pack_start(guiutils.get_pad_label(5, 3), False, False, 0)
+        target_row.pack_start(target_combo, False, False, 0)
+        target_row.pack_start(Gtk.Label(), True, True, 0)
+        vbox.pack_start(target_row, False, False, 0)
         vbox.pack_start(guicomponents.EditorSeparator().widget, False, False, 0)
-    
+
     # Transition editors
     t_editable_properties = propertyedit.get_transition_editable_properties(compositor)
     for ep in t_editable_properties:
@@ -248,6 +218,7 @@ def _display_compositor_edit_box():
         if ((editor_type == propertyeditorbuilder.KEYFRAME_EDITOR)
             or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_RELEASE)
             or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)
+            or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP_FADE)
             or (editor_type == propertyeditorbuilder.FADE_LENGTH)
             or (editor_type == propertyeditorbuilder.GEOMETRY_EDITOR)):
                 keyframe_editor_widgets.append(editor_row)
@@ -256,7 +227,7 @@ def _display_compositor_edit_box():
     # and will be looked up by editors from clip
     editor_rows = propertyeditorbuilder.get_transition_extra_editor_rows(compositor, t_editable_properties)
     for editor_row in editor_rows:
-        # These are added to keyframe editor based on editor type, not based on EditableProperty type as above
+        # These are added to keyframe editors list based on editor type, not based on EditableProperty type as above
         # because one editor sets values for multiple EditableProperty objects
         if editor_row.__class__ == keyframeeditor.RotatingGeometryEditor:
             keyframe_editor_widgets.append(editor_row)
@@ -344,8 +315,7 @@ def _save_compositor_values_dialog_callback(dialog, response_id):
 def _load_compositor_values_dialog_callback(dialog, response_id):
     if response_id == Gtk.ResponseType.ACCEPT:
         load_path = dialog.get_filenames()[0]
-        f = open(load_path)
-        compositor_data = pickle.load(f)
+        compositor_data = utils.unpickle(load_path)
 
         if compositor_data.data_applicable(compositor.transition.info):
             compositor_data.set_values(compositor)

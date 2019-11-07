@@ -39,35 +39,35 @@ def init_languages():
     lc, encoding = locale.getdefaultlocale()
     if (lc):
         langs = [lc]
-    print "Locale:", lc
+    print("Locale:", lc)
 
     language = os.environ.get('LANGUAGE', None)
     if (language):
         langs += language.split(":")
 
-    if editorstate.app_running_from == editorstate.RUNNING_FROM_INSTALLATION:
+    if editorstate.app_running_from == editorstate.RUNNING_FROM_INSTALLATION or editorstate.app_running_from == editorstate.RUNNING_FROM_FLATPAK:
         # Use /usr/share/locale first if available and running from installation
         # Look for installed translation in distro install
         # Were using Russian as test language
         if os.path.isfile("/usr/share/locale/ru/LC_MESSAGES/flowblade.mo"): # fi is the translation controlled by program author
-            print "Found translations at /usr/share/locale, using those."
+            print("Found translations at /usr/share/locale, using those.")
             locale_path = "/usr/share/locale/"
         #  Look for installed translations in flatpak install 
         elif os.path.isfile("/app/share/flowblade/Flowblade/locale/ru/LC_MESSAGES/flowblade.mo"): # fi is the translation controlled by program author
-            print "Found translations at /app/share/flowblade/Flowblade/locale, using those."
+            print("Found translations at /app/share/flowblade/Flowblade/locale, using those.")
             locale_path = "/app/share/flowblade/Flowblade/locale"
         else:
-            print "Translations at /usr/share/locale were not found, using program root directory translations."
+            print("Translations at /usr/share/locale were not found, using program root directory translations.")
             locale_path = respaths.LOCALE_PATH
     else:
         # Use translations in program folder first if NOT running from installation
         # Were using Russian as test language
         locale_file = respaths.LOCALE_PATH + "ru/LC_MESSAGES/flowblade.mo"
         if os.path.isfile(locale_file): # fi is the translation controlled by program author
-            print "Found translations at " +  respaths.LOCALE_PATH + ", using those."
+            print("Found translations at " +  respaths.LOCALE_PATH + ", using those.")
             locale_path = respaths.LOCALE_PATH
         else:
-            print "Translations at " + locale_file + " were not found, using /usr/share/locale translations."
+            print("Translations at " + locale_file + " were not found, using /usr/share/locale translations.")
             locale_path = "/usr/share/locale/"
 
     gettext.bindtextdomain(APP_NAME, locale_path)
@@ -84,13 +84,13 @@ def init_languages():
         lang_code = editorpersistance.prefs.force_language
     
     if editorpersistance.prefs.force_language == "English":
-        print "Force use English."
+        print("Force use English.")
         lang = gettext.translation(APP_NAME, locale_path, languages=["dummy"], fallback=True)
     elif editorpersistance.prefs.force_language != "None":
-        print "Force use ", editorpersistance.prefs.force_language
+        print("Force use ", editorpersistance.prefs.force_language)
         lang = gettext.translation(APP_NAME, locale_path, languages=[str(editorpersistance.prefs.force_language)], fallback=True)
     else:
-        print "Use OS locale language."
+        print("Use OS locale language.")
         lang = gettext.translation(APP_NAME, locale_path, languages=langs, fallback=True)
 
     # Un-comment for translations tests
@@ -249,7 +249,6 @@ def load_filters_translations():
     filter_names["Soft Glow"]= _("Soft Glow")
     filter_names["Newspaper"]= _("Newspaper")
 
-    # 0.16 added
     filter_names["Luma Key"] = _("Luma Key")
     filter_names["Chroma Key"] = _("Chroma Key")
     filter_names["Affine"] = _("Affine")
@@ -259,7 +258,6 @@ def load_filters_translations():
     filter_names["Lift Gain Gamma"] = _("Lift Gain Gamma")
     filter_names["Image Grid"] = _("Image Grid")
 
-    # Later
     filter_names["Color Lift Gain Gamma"] = _("Color Lift Gain Gamma")
     filter_names["Color Channel Mixer"] = _("Color Channel Mixer")
     filter_names["Lens Correction AV"] = _("Lens Correction AV")
@@ -269,11 +267,14 @@ def load_filters_translations():
     filter_names["Normalize"] = _("Normalize")
     filter_names["File Luma to Alpha"] = _("File Luma to Alpha") 
     filter_names["Gradient Tint"] = _("Gradient Tint")
+    filter_names["RotoMask"] = _("RotoMask")
+    filter_names["Lens Defisher"] = _("Lens Defisher")
+    filter_names["Position Scale"] = _("Position Scale")
+    filter_names["Wipe"] = _("Wipe")
     
     # param names
     global param_names
 
-    # param names for filters
     param_names["Position"] = _("Position")
     param_names["Grad width"] = _("Grad width")
     param_names["Tilt"] = _("Tilt")
@@ -488,7 +489,7 @@ def load_filters_translations():
     param_names["Rotate X"] = _("Rotate X")
     param_names["Rotate Y"] = _("Rotate Y")
     param_names["Rotate Z"] = _("Rotate Z")
-    # added 0.8
+
     param_names["Edge Mode"] = _("Edge Mode")
     param_names["Sel. Space"] = _("Sel. Space")
     param_names["Operation"] = _("Operation")
@@ -563,7 +564,6 @@ def load_filters_translations():
     param_names["Level"] = _("Level")
     param_names["Select .cube file"] = _("Select .cube file")
     
-    # param names for compositors
     param_names["Opacity"] = _("Opacity")
     param_names["Shear X"] = _("Shear X")
     param_names["Shear Y"] = _("Shear Y")
@@ -583,7 +583,7 @@ def load_filters_translations():
     param_names["Target Loudness"] = _("Blend Mode")
     param_names["Analysis Length"] = _("Analysis Length")
     param_names["Max Gain"] = _("Max Gain")
-    param_names["Min Mode"] = _("Min Mode")
+    param_names["Min Gain"] = _("Min Gain")
     param_names["Select file"] = _("Select file")
     param_names["Smooth"] = _("Smooth")
     param_names["Radius"] = _("Radius")
@@ -598,8 +598,21 @@ def load_filters_translations():
     param_names["End X"] = _("End X")
     param_names["Gradient Type"] = _("Gradient Type")
     param_names["Radial Offset"] = _("Radial Offset")
-    
-    
+    param_names["Feather Passes"] = _("Feather Passes")
+    param_names["Alpha Mode"] = _("Alpha Mode")
+    param_names["Feather"] = _("Feather")
+    param_names["Mode"] = _("Mode")
+    param_names["Input Pixel Aspect Ratio"] = _("Input Pixel Aspect Ratio")
+    param_names["Direction"] = _("Direction")
+    param_names["Lens Projection"] = _("Lens Projection")
+    param_names["Interpolator"] = _("Interpolator")
+    param_names["Strength"] = _("Strength")
+    param_names["X Scale"] = _("X Scale")
+    param_names["Y Scale"] = _("Y Scale")
+    param_names["Rotation"]= _("Rotation")
+    param_names["X Position"] = _("X Position")
+    param_names["Y Position"] = _("Y Position")
+
     # Combo options
     global combo_options
     combo_options["Shave"] = _("Shave")
@@ -673,3 +686,23 @@ def load_filters_translations():
     combo_options["Cos"] = _("Cos")
     combo_options["Linear"] = _("Linear")
     combo_options["Radial"] = _("Radial")
+    combo_options["Clear"] = _("Clear")
+    combo_options["Add"] = _("Add")
+    combo_options["Subtract"] = _("Subtract")
+    combo_options["Alpha"] = _("Alpha")
+    combo_options["Square"] = _("Square")
+    combo_options["HDV"] = _("HDV")
+    combo_options["DV/DVD Widescreen PAL"] = _("DV/DVD Widescreen PAL")
+    combo_options["DV/DVD Widescreen NTSC"] = _("DV/DVD Widescreen NTSC")
+    combo_options["DV/DVD PAL"] = _("DV/DVD PAL")
+    combo_options["DV/DVD NTSC"] = _("DV/DVD NTSC")
+    combo_options["Remove Lens Distortion"] = _("Remove Lens Distortion")
+    combo_options["Apply Lens Distortion"] = _("Apply Lens Distortion")
+    combo_options["Equidistant"] = _("Equidistant")
+    combo_options["Orthographic"] = _("Orthographic")
+    combo_options["Equiarea"] = _("Equiarea")
+    combo_options["Stereographic"] = _("Stereographic")
+    combo_options["Bilinear"] = _("Bilinear")
+    combo_options["Bicubic Smooth"] = _("Bicubic Smooth")
+    combo_options["Bicubic Sharp"] = _("Bicubic Sharp")
+    combo_options["Spline"] = _("Spline")

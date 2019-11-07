@@ -135,15 +135,15 @@ class AbstactEditorLayer:
         return angle
 
     def mouse_pressed(self):
-        print "AbstactEditorLayer.mouse_pressed not overridden in" + self.__class__
+        print("AbstactEditorLayer.mouse_pressed not overridden in" + self.__class__)
         sys.exit(1)
         
     def mouse_dragged(self):
-        print "AbstactEditorLayer.mouse_dragged not overridden in" + self.__class__
+        print("AbstactEditorLayer.mouse_dragged not overridden in" + self.__class__)
         sys.exit(1)
         
     def mouse_released(self):
-        print "AbstactEditorLayer.mouse_released not overridden in" + self.__class__
+        print("AbstactEditorLayer.mouse_released not overridden in" + self.__class__)
         sys.exit(1)
 
     def get_mouse_delta(self):
@@ -153,7 +153,7 @@ class AbstactEditorLayer:
 
     # -------------------------------------------- draw
     def draw(self, cr, write_out_layers, draw_overlays):
-        print "AbstactEditorLayer.draw not overridden in" + self.__class__
+        print("AbstactEditorLayer.draw not overridden in" + self.__class__)
         sys.exit(1)
 
 
@@ -255,7 +255,7 @@ class TextEditLayer(SimpleRectEditLayer):
         xscale = self.view_editor.scale #* self.view_editor.aspect_ratio
         yscale = self.view_editor.scale
         # x for write out image is on different place because computer screen has box pixels, 
-        # some video formats do not
+        # and some video formats do not.
         # were not getting pixel perfect results here but its mostly ok
         if write_out_layers == True:
             x = x / self.view_editor.aspect_ratio
@@ -285,7 +285,7 @@ class RotoMaskEditLayer(AbstactEditorLayer):
 
         self.allow_adding_points = False
 
-        self.edit_point_shape = vieweditorshape.RotoMaskEditShape(view_editor, clip_editor)
+        self.edit_point_shape = vieweditorshape.RotoMaskEditShape(view_editor, clip_editor, rotomask_editor)
         self.edit_point_shape.update_shape()
 
         #self.block_shape_update = False 
@@ -336,6 +336,7 @@ class RotoMaskEditLayer(AbstactEditorLayer):
                         len(self.edit_point_shape.curve_points) > 2):
                         self.edit_point_shape.closed = True
                         self.edit_point_shape.maybe_force_line_mask(True) # We start with line mask curve points
+                        self.rotomask_editor.update_mask_create_freeze_gui() # Shape closed unfreeze GUI
                     else:
                         # Point pressed, we are moving it
                         self.edit_point_shape.clear_selection()
@@ -381,6 +382,8 @@ class RotoMaskEditLayer(AbstactEditorLayer):
                         self.rotomask_editor.show_current_frame()
                     else:
                         self.add_edit_point(len(self.edit_point_shape.curve_points), self.mouse_press_panel_point)
+                    
+                    self.rotomask_editor.update_mask_create_freeze_gui() 
 
         self.clip_editor.widget.queue_draw()
             

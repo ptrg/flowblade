@@ -194,6 +194,7 @@ def workflow_menu_launched(widget, event):
 
     behaviours_menu = Gtk.Menu()
     
+    # Delete item not currently used
     delete_item = Gtk.MenuItem.new_with_label(_("Default Delete Action"))
     delete_item.show()
 
@@ -210,20 +211,24 @@ def workflow_menu_launched(widget, event):
     dnd_menu = Gtk.Menu()
     labels = [_("Always Overwrite Blanks"), _("Overwrite Blanks on non-V1 Tracks"), _("Always Insert")]
     msgs = ["always overwrite", "overwrite nonV1", "always insert"]
-    active_index = editorpersistance.prefs.dnd_action  #appconsts values corrspond with order here
+    active_index = editorpersistance.prefs.dnd_action  # appconsts values correspond with order here.
     _build_radio_menu_items_group(dnd_menu, labels, msgs, _workflow_menu_callback, active_index)
 
     dnd_item.set_submenu(dnd_menu)
     behaviours_menu.add(dnd_item)
 
-    autofollow_item = Gtk.CheckMenuItem()
-    autofollow_item.set_label(_("Compositors Auto Follow"))
-    autofollow_item.set_active(editorstate.auto_follow_active())
-    autofollow_item.connect("activate", _workflow_menu_callback, (None, "autofollow"))
-    autofollow_item.show()
+    default_compositing_item = Gtk.MenuItem.new_with_label(_("New Sequence Default Compositing Mode"))
+    default_compositing_item.show()
+    
+    default_compositing_menu = Gtk.Menu()
+    labels = [_("Top Down Free Move"), _("Top Down Auto Follow"), _("Standard Auto Follow")]
+    msgs = ["top down", "top down auto", "standard auto"]
+    active_index = editorpersistance.prefs.default_compositing_mode  # appconsts values correspond with order here.
+    _build_radio_menu_items_group(default_compositing_menu, labels, msgs, _workflow_menu_callback, active_index)
 
-    behaviours_menu.append(autofollow_item)
-
+    default_compositing_item.set_submenu(default_compositing_menu)
+    behaviours_menu.add(default_compositing_item)
+    
     show_tooltips_item = Gtk.CheckMenuItem()
     show_tooltips_item.set_label(_("Show Tooltips for Tools"))
     show_tooltips_item.set_active(editorpersistance.prefs.show_tool_tooltips)
@@ -239,12 +244,12 @@ def workflow_menu_launched(widget, event):
     guiutils.add_separetor(_workflow_menu)
     
     # Active tools
-    non_active_tools = range(1, 12) # we have 11 tools currently
+    non_active_tools = list(range(1, 12)) # we have 11 tools currently
     for i in range(0, len(editorpersistance.prefs.active_tools)):#  tool_id in _TOOLS_DATA:
         tool_id = editorpersistance.prefs.active_tools[i]
         tool_name, tool_icon_file = _TOOLS_DATA[tool_id]
         _workflow_menu.add(_get_workflow_tool_menu_item(_workflow_menu_callback, tool_id, tool_name, tool_icon_file, i+1))
-        try: # needed to prevent crashes when manually changing preset tools during dev, remove when those are decided upon
+        try: # needed to prevent crashes when manually changing preset tools during dev
             non_active_tools.remove(tool_id)
         except:
             pass
@@ -313,7 +318,7 @@ def _get_workflow_tool_submenu(callback, tool_id, position):
     sub_menu = Gtk.Menu()
     
     tool_active = (tool_id in editorpersistance.prefs.active_tools)
-    activity_item = Gtk.CheckMenuItem(_("Tool Active").encode('utf-8'))
+    activity_item = Gtk.CheckMenuItem(_("Tool Active"))
     activity_item.set_active(tool_active)
     activity_item.connect("toggled", callback, (tool_id, "activity"))
     activity_item.show()
@@ -341,7 +346,7 @@ def _get_workflow_tool_submenu(callback, tool_id, position):
     
     # Individual prefs for tools
     if tool_id == appconsts.TLINE_TOOL_OVERWRITE:
-        pref_item = Gtk.CheckMenuItem(_("Do Box Selection and Box Move from empty press").encode('utf-8'))
+        pref_item = Gtk.CheckMenuItem(_("Do Box Selection and Box Move from empty press"))
         pref_item.set_active(editorpersistance.prefs.box_for_empty_press_in_overwrite_tool)
         pref_item.connect("toggled", _TLINE_TOOL_OVERWRITE_box_selection_pref)
         pref_item.show()
@@ -362,27 +367,24 @@ def _workflow_menu_callback(widget, data):
         _set_workflow_STANDARD()
     elif msg == "preset filmstyle":
         _set_workflow_FILM_STYLE()
-    elif msg == "autofollow":
-        active = widget.get_active()
-        editorstate.auto_follow = active
-        PROJECT().set_project_property(appconsts.P_PROP_AUTO_FOLLOW, active)
-        if active == True:
-            # Do autofollow update if auto follow activated
-            compositor_autofollow_data = edit.get_full_compositor_sync_data()
-            edit.do_autofollow_redo(compositor_autofollow_data)
-        updater.repaint_tline()
     elif  msg == "always overwrite":
         editorpersistance.prefs.dnd_action = appconsts.DND_ALWAYS_OVERWRITE
     elif  msg == "overwrite nonV1":
         editorpersistance.prefs.dnd_action = appconsts.DND_OVERWRITE_NON_V1
     elif  msg == "always insert":
         editorpersistance.prefs.dnd_action = appconsts.DND_ALWAYS_INSERT
-    elif  msg ==  "tooltips":
+    elif  msg == "tooltips":
         editorpersistance.prefs.show_tool_tooltips = widget.get_active()
+    elif  msg == "top down":
+        editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
+    elif  msg == "top down auto":
+        editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW
+    elif  msg == "standard auto":
+        editorpersistance.prefs.default_compositing_mode = appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW
     elif msg == "delete lift" and widget.get_active() == True:
-        print "lift"
+        print("lift")
     elif msg == "delete splice" and widget.get_active() == True:
-        print "splice"
+        print("splice")
     else:
         try:
             pos = int(msg)
@@ -422,22 +424,22 @@ class WorkflowDialog(Gtk.Dialog):
     def __init__(self):
         Gtk.Dialog.__init__(self, _("Workflow First Run Wizard"),  gui.editor_window.window,
                                 Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                                (_("Select Preset Workflow and Continue").encode('utf-8'), Gtk.ResponseType.ACCEPT))
+                                (_("Select Preset Workflow and Continue"), Gtk.ResponseType.ACCEPT))
 
         self.selection = STANDARD_PRESET 
         
-        info_label_text_1 = _("<b>Welcome to Flowblade 2.0</b>")
+        info_label_text_1 = _("<b>Welcome to Flowblade 2.2</b>")
         info_label_1 = Gtk.Label(info_label_text_1)
         info_label_1.set_use_markup(True)
 
 
-        info_label_text_2 = _("<b>Flowblade 2.0</b> comes with a configurable workflow.")
+        info_label_text_2 = _("<b>Flowblade 2.2</b> comes with a configurable workflow.")
         info_label_2 = Gtk.Label(info_label_text_2)
         info_label_2.set_use_markup(True)
 
         INDENT = "    "
-        info_label_text_6 = INDENT + u"\u2022" + _(" You can select which <b>tools</b> you want to use.\n") + \
-                            INDENT + u"\u2022" + _(" Many timeline edit <b>behaviours</b> are configurable.\n")
+        info_label_text_6 = INDENT + "\u2022" + _(" You can select which <b>tools</b> you want to use.\n") + \
+                            INDENT + "\u2022" + _(" Many timeline edit <b>behaviours</b> are configurable.\n")
 
         info_label_6 = Gtk.Label(info_label_text_6)
         info_label_6.set_use_markup(True)
