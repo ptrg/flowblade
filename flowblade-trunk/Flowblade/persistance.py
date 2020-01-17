@@ -398,6 +398,11 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
 
     global _load_file_path
     _load_file_path = file_path
+
+    # We need to collect some proxy data to try to fix projects with missing proxy files.
+    global project_proxy_mode, proxy_path_dict
+    project_proxy_mode = project.proxy_data.proxy_mode
+    proxy_path_dict = {}
     
     # editorstate.project needs to be available for sequence building
     editorstate.project = project
@@ -417,11 +422,46 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
     if project.profile == None:
         raise ProjectProfileNotFoundError(project.profile_desc)
 
+    for k, media_file in project.media_files.items():
+        if project.SAVEFILE_VERSION < 4:
+            FIX_N_TO_4_MEDIA_FILE_COMPATIBILITY(media_file)
+        media_file.current_frame = 0 # this is always reset on load, value is not considered persistent
+
+        # This fixes Media Relinked projects with SAVEFILE_VERSION < 4:
+        if (not(hasattr(media_file,  "is_proxy_file"))):
+            FIX_N_TO_4_MEDIA_FILE_COMPATIBILITY(media_file)
+            
+        # Try to find relative path files if needed for non-proxy media files
+        if media_file.is_proxy_file == False:
+            if media_file.type != appconsts.PATTERN_PRODUCER and media_file.type != appconsts.IMAGE_SEQUENCE:
+                media_file.path = get_media_asset_path(media_file.path, _load_file_path)
+            elif media_file.type == appconsts.IMAGE_SEQUENCE:
+                media_file.path = get_img_seq_media_path(media_file.path, _load_file_path)
+
+        # This attr was added for 1.8. It is not computed for older projects.
+        if (not hasattr(media_file, "info")):
+            media_file.info = None
+        # We need this in all media files, used only by img seq media
+        if not hasattr(media_file, "ttl"):
+            media_file.ttl = None
+
+        # Use this to try to fix clips with missing proxy files.
+        proxy_path_dict[media_file.path] = media_file.second_file_path
+        
+        # Try to fix possible missing proxy files for media assets if we are in proxy mode.
+        if not os.path.isfile(media_file.path) and media_file.is_proxy_file and project_proxy_mode == appconsts.USE_PROXY_MEDIA:
+            if os.path.isfile(media_file.second_file_path): # Original media file exists, use it
+                media_file.set_as_original_media_file()
+
     # Add MLT objects to sequences.
     global all_clips, sync_clips
     seq_count = 1
     for seq in project.sequences:
         FIX_N_TO_3_SEQUENCE_COMPATIBILITY(seq)
+            
+        if not hasattr(seq, "compositing_mode"):
+            seq.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
+
         _show_msg(_("Building sequence ") + str(seq_count))
         all_clips = {}
         sync_clips = []
@@ -433,33 +473,11 @@ def load_project(file_path, icons_and_thumnails=True, relinker_load=False):
 
         if not hasattr(seq, "seq_len"):
             seq.update_edit_tracks_length()
-            
-        if not hasattr(seq, "compositing_mode"):
-            seq.compositing_mode = appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE
 
         seq_count = seq_count + 1
 
     all_clips = {}
     sync_clips = []
-
-    for k, media_file in project.media_files.items():
-        if project.SAVEFILE_VERSION < 4:
-            FIX_N_TO_4_MEDIA_FILE_COMPATIBILITY(media_file)
-        media_file.current_frame = 0 # this is always reset on load, value is not considered persistent
-        if media_file.type != appconsts.PATTERN_PRODUCER and media_file.type != appconsts.IMAGE_SEQUENCE:
-            media_file.path = get_media_asset_path(media_file.path, _load_file_path)
-        elif media_file.type == appconsts.IMAGE_SEQUENCE:
-            media_file.path = get_img_seq_media_path(media_file.path, _load_file_path)
-            
-        # This fixes Media Relinked projects with SAVEFILE_VERSION < 4:
-        if (not(hasattr(media_file,  "is_proxy_file"))):
-            FIX_N_TO_4_MEDIA_FILE_COMPATIBILITY(media_file)
-        # This attr was added for 1.8. It is not computed for older projects.
-        if (not hasattr(media_file, "info")):
-            media_file.info = None
-        # We need this in all media files, used only by img seq media
-        if not hasattr(media_file, "ttl"):
-            media_file.ttl = None
                 
     if(not hasattr(project, "update_media_lengths_on_load")):
         project.update_media_lengths_on_load = True # old projects < 1.10 had wrong media length data which just was never used.
@@ -577,12 +595,21 @@ def fill_track_mlt(mlt_track, py_track):
         # normal clip
         if (clip.is_blanck_clip == False and (clip.media_type != appconsts.PATTERN_PRODUCER)):
             orig_path = clip.path # Save the path for error message
-            
+
             if clip.media_type != appconsts.IMAGE_SEQUENCE:
                 clip.path = get_media_asset_path(clip.path, _load_file_path)
             else:
                 clip.path = get_img_seq_media_path(clip.path, _load_file_path)
-                
+
+            # Try to fix possible missing proxy files for clips if we are in proxy mode.
+            if not os.path.isfile(clip.path) and project_proxy_mode == appconsts.USE_PROXY_MEDIA:
+                try:
+                    possible_orig_file_path = proxy_path_dict[clip.path] # This dict was filled with media file data.
+                    if os.path.isfile(possible_orig_file_path): # Original media file exists, use it
+                        clip.path = possible_orig_file_path
+                except:
+                    pass # missing proxy file fix has failed
+                    
             mlt_clip = sequence.create_file_producer_clip(clip.path, None, False, clip.ttl)
             
             if mlt_clip == None:
@@ -628,6 +655,10 @@ def fill_filters_mlt(mlt_clip, sequence):
     """ 
     filters = []
     for py_filter in mlt_clip.filters:
+
+        if not hasattr(py_filter.info, "filter_mask_filter"):
+            py_filter.info.filter_mask_filter = None
+        
         if py_filter.is_multi_filter == False:
             if py_filter.info.mlt_service_id == "affine":
                 FIX_1_TO_N_BACKWARDS_FILTER_COMPABILITY(py_filter)

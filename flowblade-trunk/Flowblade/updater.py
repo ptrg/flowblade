@@ -173,8 +173,9 @@ def update_tline_scrollbar():
         pos = 0.0
 
     # Create and set adjustment
-    adjustment = Gtk.Adjustment(pos, 0.0, 100.0, 
-                                1.0, 10.0, page_size)
+    page_size_in = page_size
+    adjustment = Gtk.Adjustment(value=pos, lower=0.0, upper=100.0, 
+                                step_increment=1.0, page_increment=10.0, page_size=page_size_in)
     adjustment.connect("value-changed", tline_scrolled)
     try: # when testing this might get called before gui is build
         gui.tline_scroll.set_adjustment(adjustment)
@@ -564,6 +565,12 @@ def update_frame_displayers(frame):
     clipeffectseditor.display_kfeditors_tline_frame(frame)
     compositeeditor.display_kfeditors_tline_frame(frame)
 
+def update_position_bar():
+    if timeline_visible():
+        gui.pos_bar.update_display_from_producer(PLAYER().producer)
+    else:
+        gui.pos_bar.update_display_from_producer(gui.pos_bar.producer)
+    
 def update_kf_editor():
     clipeffectseditor.update_kfeditors_positions()
 

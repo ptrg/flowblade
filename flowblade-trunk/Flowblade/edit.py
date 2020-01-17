@@ -437,6 +437,8 @@ class EditAction:
             current_sequence().update_trim_hack_blank_length() # NEEDED FOR TRIM CRASH HACK, REMOVE IF FIXED
         PLAYER().display_inside_sequence_length(current_sequence().seq_len) # NEEDED FOR TRIM CRASH HACK, REMOVE IF FIXED
 
+        updater.update_position_bar()
+
         updater.update_seqence_info_text()
 
 
@@ -1772,6 +1774,41 @@ def _add_filter_redo(self):
         
     self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1) # updates effect stack gui
 
+#------------------- ADD TWO FILTERS
+# NOTE: Using this requires that index_2 > index_1
+# "clip","filter_info_1",filter_info_2","index_1","index_2","filter_edit_done_func"
+# Adds filter to clip.
+def add_two_filters_action(data):
+    action = EditAction(_add_two_filters_undo, _add_two_filters_redo, data)
+    return action
+
+def _add_two_filters_undo(self):
+    _detach_all(self.clip)
+    
+    self.clip.filters.pop(self.index_2)
+    self.clip.filters.pop(self.index_1)
+    
+    _attach_all(self.clip)
+
+    self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1) # updates effect stack gui
+
+def _add_two_filters_redo(self):
+    _detach_all(self.clip)
+    
+    try: # is redo, fails for first because no new filters have been created
+        self.clip.filters.insert(self.index_1, self.filter_object_1)
+        self.clip.filters.insert(self.index_2, self.filter_object_2)
+    except: # First do
+        self.filter_object_1 = current_sequence().create_filter(self.filter_info_1)
+        self.filter_object_2 = current_sequence().create_filter(self.filter_info_2)
+        self.clip.filters.insert(self.index_1, self.filter_object_1)
+        self.clip.filters.insert(self.index_2, self.filter_object_2)
+        
+    _attach_all(self.clip)
+            
+    self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1) # updates effect stack gui
+
+
 #------------------- ADD MULTIPART FILTER
 # "clip","filter_info","filter_edit_done_func"
 # Adds filter to clip.
@@ -1822,6 +1859,36 @@ def _remove_filter_redo(self):
 
     self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1)# updates effect stack gui
 
+#------------------- REMOVE TWO FILTER
+# "clip","index_1", "index_2","filter_edit_done_func"
+# We need that index_2 > index_1
+def remove_two_filters_action(data):
+    action = EditAction(_remove_two_filters_undo, _remove_two_filters_redo, data)
+    return action
+
+def _remove_two_filters_undo(self):
+    _detach_all(self.clip)
+    
+    try:
+        self.clip.filters.insert(self.index_1, self.filter_object_1)
+        self.clip.filters.insert(self.index_2, self.filter_object_2)
+    except:
+        self.clip.filters.append(self.filter_object)
+
+    _attach_all(self.clip)
+        
+    self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1) # updates effect stack gui if needed
+
+def _remove_two_filters_redo(self):
+    _detach_all(self.clip)
+    
+    self.filter_object_2 = self.clip.filters.pop(self.index_2)
+    self.filter_object_1 = self.clip.filters.pop(self.index_1)
+    
+    _attach_all(self.clip)
+
+    self.filter_edit_done_func(self.clip, len(self.clip.filters) - 1)# updates effect stack gui
+    
 #------------------- MOVE FILTER
 # "clip",""insert_index","delete_index"","filter_edit_done_func"
 # Moves filter in filter stack filter to clip.
@@ -2725,6 +2792,22 @@ def _add_rendered_fade_out_redo(self):
     _insert_clip(self.track,  self.orig_clip, self.index, self.orig_clip.clip_in, self.orig_clip.clip_out - self.length)
     _insert_clip(self.track, self.fade_clip, self.index + 1, 0, self.length - 1)
 
+
+# -------------------------------------------------------- MEDIA RELOAD CLIP REPLACE
+# "old_clip", "new_clip", "track", "index"
+def reload_replace(data):
+    action = EditAction(_reload_replace_undo, _reload_replace_redo, data)
+    return action
+
+def _reload_replace_undo(self):
+    _remove_clip(self.track, self.index)
+    _insert_clip(self.track, self.old_clip, self.index, self.old_clip.clip_in, self.old_clip.clip_out)
+    
+def _reload_replace_redo(self):
+    _remove_clip(self.track, self.index)
+    _insert_clip(self.track, self.new_clip, self.index, self.old_clip.clip_in, self.old_clip.clip_out)
+
+
 #-------------------- APPEND MEDIA LOG
 # "track","clips"
 def append_media_log_action(data):
@@ -2739,7 +2822,6 @@ def _append_media_log_redo(self):
     for i in range(0, len(self.clips)):
         clip = self.clips[i]
         append_clip(self.track, clip, clip.clip_in, clip.clip_out)
-
 
 
 # --------------------------------------------- help funcs for "range over" and "range splice out" edits

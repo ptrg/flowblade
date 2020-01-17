@@ -85,6 +85,7 @@ media_panel_popup_menu = Gtk.Menu()
 bin_popup_menu = Gtk.Menu()
 sequence_popup_menu = Gtk.Menu()
 hamburger_popup_menu = Gtk.Menu()
+compositing_mode_menu = Gtk.Menu()
 
 save_time = None
 save_icon_remove_event_id = None
@@ -182,9 +183,17 @@ class LoadThread(threading.Thread):
         if selections != None:
             render.set_saved_gui_selections(selections)
         updater.set_info_icon(None)
+        
+        # If project file is moved since last save we need to update last_save_path property and save to get everything working as expected.
+        if self.filename != editorstate.project.last_save_path:
+            print("Project file moved since last save, save with updated last_save_path data.")
+            editorstate.project.last_save_path = self.filename
+            _save_project_in_last_saved_path()
+            
         dialog.destroy()
-        gui.tline_canvas.connect_mouse_events() # mouse events dutring load cause crashes because there is no data to handle
+        gui.tline_canvas.connect_mouse_events() # mouse events during load cause crashes because there is no data to handle
         Gdk.threads_leave()
+
 
         ticker.stop_ticker()
 
@@ -445,7 +454,7 @@ def _save_project_in_last_saved_path():
     save_icon_remove_event_id = GObject.timeout_add(500, remove_save_icon)
 
     global save_time
-    save_time = time.clock()
+    save_time = time.monotonic()
     
     projectinfogui.update_project_info()
         
@@ -489,7 +498,7 @@ def _save_as_dialog_callback(dialog, response_id):
         save_icon_remove_event_id = GObject.timeout_add(500, remove_save_icon)
 
         global save_time
-        save_time = time.clock()
+        save_time = time.monotonic()
 
         gui.editor_window.window.set_title(PROJECT().name + " - Flowblade")        
         gui.editor_window.uimanager.get_widget("/MenuBar/FileMenu/Save").set_sensitive(False)
@@ -745,7 +754,7 @@ def get_save_time_msg():
     if save_time == None:
         return _("Project has not been saved since it was opened.")
     
-    save_ago = (time.clock() - save_time) / 60.0
+    save_ago = (time.monotonic() - save_time) / 60.0
 
     if save_ago < 1:
         return _("Project was saved less than a minute ago.")
@@ -1831,10 +1840,9 @@ def _combine_sequences_dialog_callback(dialog, response_id, action_select, seq_s
 
 def _append_sequence(import_seq):
     start_track_range, end_track_range = _get_sequence_import_range(import_seq)
-    
     tracks_off = current_sequence().first_video_index - import_seq.first_video_index
     orig_length = current_sequence().get_length()
-    
+
     # Justify ends
     for i in range(start_track_range, end_track_range):
         track = current_sequence().tracks[i]
@@ -1848,7 +1856,7 @@ def _append_sequence(import_seq):
     for i in range(start_track_range, end_track_range):
         track = current_sequence().tracks[i]
         
-        import_track = import_seq.tracks[i + tracks_off]
+        import_track = import_seq.tracks[i - tracks_off]
         insert_start_index = len(track.clips)
         for j in range(0, len(import_track.clips)):
             import_clip = import_track.clips[j]
@@ -1874,6 +1882,7 @@ def _append_sequence(import_seq):
                 edit._remove_clip(track, 0)
     # This method just needs some class to save data for undo which we are not using
     edit._consolidate_all_blanks_redo(utils.EmptyClass)
+    edit._remove_all_trailing_blanks()
     
     _update_gui_after_sequence_import()
 
@@ -1905,7 +1914,7 @@ def _insert_sequence(import_seq):
     for i in range(start_track_range, end_track_range):
         track = current_sequence().tracks[i]
         
-        import_track = import_seq.tracks[i + tracks_off]
+        import_track = import_seq.tracks[i - tracks_off]
         insert_start_index = track.get_clip_index_at(insert_frame)
         for j in range(0, len(import_track.clips)):
             import_clip = import_track.clips[j]
@@ -1941,7 +1950,8 @@ def _insert_sequence(import_seq):
                 edit._remove_clip(track, 0)
     # This method just needs some class to save data for undo which we are not using
     edit._consolidate_all_blanks_redo(utils.EmptyClass)
-    
+    edit._remove_all_trailing_blanks()
+        
     _update_gui_after_sequence_import()
 
     undo.clear_undos()
@@ -1951,15 +1961,21 @@ def _insert_sequence(import_seq):
 def _get_sequence_import_range(import_seq):
     # Compute corresponding tracks, import sequence may have less audio and/or video tracks
     first_video_off = current_sequence().first_video_index - import_seq.first_video_index
-    if first_video_off > 0:
-        start_track_range = 1 + first_video_off # import_seq has less audio tracks
-    else:
-        start_track_range = 1
     
-    video_tracks_count_diff = (len(current_sequence().tracks) - current_sequence().first_video_index) - (len(import_seq.tracks) - import_seq.first_video_index)
-    if video_tracks_count_diff > 0:
+    # Compare audio tracks count to determine first track from current sequence to be added clips from import sequence
+    if first_video_off > 0: # import_seq has less audio tracks
+        start_track_range = 1 + first_video_off 
+    else:  # import_seq has same number of audio tracks
+        start_track_range = 1
+
+    # Compare video tracks count to determine last track from current sequence to be added clips from import sequence
+    cur_seq_video_tracks_count = len(current_sequence().tracks) - current_sequence().first_video_index
+    import_seq_video_tracks_count = len(import_seq.tracks) - import_seq.first_video_index
+
+    video_tracks_count_diff = cur_seq_video_tracks_count - import_seq_video_tracks_count
+    if video_tracks_count_diff > 0: # Current sequence has more video tracks 
         end_track_range = len(current_sequence().tracks) - 1 - video_tracks_count_diff
-    else:
+    else:  # Current sequence has equak number or lass tracks 
         end_track_range = len(current_sequence().tracks) - 1
 
     return (start_track_range, end_track_range)
@@ -1975,23 +1991,50 @@ def _update_gui_after_sequence_import(): # This copied  with small modifications
 
     updater. update_seqence_info_text()
 
+
+def compositing_mode_menu_launched(widget, event):
+    guiutils.remove_children(compositing_mode_menu)
+
+    comp_top_free = guiutils.get_image_menu_item(_("Top Down Free Move"), "top_down", change_current_sequence_compositing_mode_from_corner_menu)
+    comp_top_auto = guiutils.get_image_menu_item(_("Top Down Auto Follow"), "top_down_auto", change_current_sequence_compositing_mode_from_corner_menu)
+    comp_standard_auto = guiutils.get_image_menu_item(_("Standard Auto Follow"), "standard_auto", change_current_sequence_compositing_mode_from_corner_menu)
+    
+    comp_top_free.connect("activate", lambda w: change_current_sequence_compositing_mode_from_corner_menu(appconsts.COMPOSITING_MODE_TOP_DOWN_FREE_MOVE))
+    comp_top_auto.connect("activate", lambda w: change_current_sequence_compositing_mode_from_corner_menu(appconsts.COMPOSITING_MODE_TOP_DOWN_AUTO_FOLLOW))
+    comp_standard_auto.connect("activate", lambda w: change_current_sequence_compositing_mode_from_corner_menu(appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW))
+
+    compositing_mode_menu.add(comp_top_free)
+    compositing_mode_menu.add(comp_top_auto)
+    compositing_mode_menu.add(comp_standard_auto)
+
+    compositing_mode_menu.popup(None, None, None, None, event.button, event.time)
+    
+def change_current_sequence_compositing_mode_from_corner_menu(new_compositing_mode):
+    if current_sequence().compositing_mode == new_compositing_mode:
+        return 
+        
+    dialogs.confirm_compositing_mode_change(_compositing_mode_dialog_callback, new_compositing_mode)
+
 def change_current_sequence_compositing_mode(menu_widget, new_compositing_mode):
     if menu_widget.get_active() == False:
         return
     
     dialogs.confirm_compositing_mode_change(_compositing_mode_dialog_callback, new_compositing_mode)
-
+        
 def _compositing_mode_dialog_callback(dialog, response_id, new_compositing_mode):
     dialog.destroy()
     if response_id != Gtk.ResponseType.ACCEPT:
         gui.editor_window.init_compositing_mode_menu()
         return
     
-    # Destry stuff
-    
+    # Destroy stuff
     compositeeditor.clear_compositor()
+    current_sequence().destroy_compositors()
+    undo.clear_undos()
     current_sequence().compositing_mode = new_compositing_mode
     updater.repaint_tline()
+
+    gui.comp_mode_launcher.set_pixbuf(new_compositing_mode) # pixbuf indexes correspond with compositing mode enums.
 
 # --------------------------------------------------------- pop-up menus
 def media_file_menu_item_selected(widget, data):

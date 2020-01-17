@@ -645,13 +645,18 @@ class Sequence:
                 if comp.destroy_id == old_compositor.destroy_id:
                     found = True
                     self.compositors.remove(comp)
-                    #edit.old_compositors.append(comp)
                     old_compositor = comp
             if found == False:
                 raise ValueError('compositor not found using destroy_id')
             
         self.field.disconnect_service(old_compositor.transition.mlt_transition)
 
+    def destroy_compositors(self):
+        # This can be called when undo stack destroyd too.
+        for compositor in self.compositors:
+            self.field.disconnect_service(compositor.transition.mlt_transition)
+        self.compositors = []
+            
     def get_compositor_for_destroy_id(self, destroy_id):
         for comp in self.compositors:
             if comp.destroy_id == destroy_id:
@@ -669,7 +674,13 @@ class Sequence:
         """
         Compositor order must be from top to bottom or will not work.
         """
-        self.compositors.sort(key=_sort_compositors_comparator)
+        if self.compositing_mode != appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW:
+            self.compositors.sort(key=_sort_compositors_comparator, reverse=True)
+        else:
+            self.compositors.sort(key=_sort_compositors_comparator)
+        
+        #for comp in self.compositors:
+        #    print(comp.transition.b_track)
         
     def get_track_compositors(self, track_index):
         track_compositors = []
@@ -1089,7 +1100,6 @@ class Sequence:
         for i in range(0, track.count()):
             clip = track.get_clip(i)
             print(i, " in:", clip.get_in()," out:", clip.get_out())
-
 
     def print_compositors(self):
         for compositor in self.compositors:

@@ -226,7 +226,6 @@ class EditorWindow:
             ('FiltersOff', None, _('All Filters Off'), None, None, lambda a:tlineaction.all_filters_off()),
             ('FiltersOn', None, _('All Filters On'), None, None, lambda a:tlineaction.all_filters_on()),
             ('SyncCompositors', None, _('Sync All Compositors'), '<alt>S', None, lambda a:tlineaction.sync_all_compositors()),
-            ('CompositorsFadesDefaults', None, _('Set Compositor Auto Fades...'), None, None, lambda a:tlineaction.set_compositors_fades_defaults()),
             ('ChangeSequenceTracks', None, _('Change Sequence Tracks Count...'), None, None, lambda a:projectaction.change_sequence_track_count()),
             ('Watermark', None, _('Watermark...'), None, None, lambda a:menuactions.edit_watermark()),
             ('DiskCacheManager', None, _('Disk Cache Manager'), None, None, lambda a:diskcachemanagement.show_disk_management_dialog()),
@@ -505,17 +504,19 @@ class EditorWindow:
         self.effect_select_list_view.treeview.connect("row-activated", clipeffectseditor.effect_select_row_double_clicked)
         dnd.connect_effects_select_tree_view(self.effect_select_list_view.treeview)
 
-
-
         clip_editor_panel, info_row = clipeffectseditor.get_clip_effects_editor_panel(
                                         self.effect_select_combo_box,
                                         self.effect_select_list_view)
 
         clipeffectseditor.widgets.effect_stack_view.treeview.connect("button-press-event",
                                               clipeffectseditor.filter_stack_button_press)
-                                              
-        effects_editor_panel = guiutils.set_margins(clipeffectseditor.widgets.value_edit_frame, 0, 0, 8, 0)
-        
+
+        if not(editorstate.SCREEN_HEIGHT < 1023):                                  
+            effects_editor_panel = guiutils.set_margins(clipeffectseditor.widgets.value_edit_frame, 0, 0, 8, 0)
+        else:
+            guiutils.set_margins(clip_editor_panel, 4, 4, 4, 0)
+            effects_editor_panel = guiutils.set_margins(clipeffectseditor.widgets.value_edit_frame, 4, 0, 4, 4)
+    
         effects_hbox = Gtk.HBox()
         effects_hbox.set_border_width(0)
         effects_hbox.pack_start(clip_editor_panel, False, False, 0)
@@ -524,10 +525,13 @@ class EditorWindow:
         effects_vbox = Gtk.VBox()
         effects_vbox.pack_start(effects_hbox, True, True, 0)
         effects_vbox.pack_start(info_row, False, False, 0)
-        
-        self.effects_panel = guiutils.set_margins(effects_vbox, 8, 0, 7, 2)
-        
-        self.fblade_theme_fix_panels.append(self.effects_panel)
+
+        if not(editorstate.SCREEN_HEIGHT < 1023):   
+            self.effects_panel = guiutils.set_margins(effects_vbox, 8, 0, 7, 2)
+        else:
+            self.effects_panel = effects_vbox
+
+        self.fblade_theme_fix_panels.append(self.effects_panel) # may not be needed?
         
         # Compositors panel
         action_row = compositeeditor.get_compositor_clip_panel()
@@ -744,7 +748,7 @@ class EditorWindow:
         if editorpersistance.prefs.double_track_hights:
             size_adj = 1.4
             size_x = tlinewidgets.COLUMN_WIDTH - (66*size_adj)
-            # size_y = round(tlinewidgets.SCALE_HEIGHT*1.1)
+
         info_h.set_size_request(size_x, size_y)
 
         # Aug-2019 - SvdB - BB - add size_adj and width/height as parameter to be able to adjust it for double height        
@@ -756,7 +760,10 @@ class EditorWindow:
 
         levels_launcher_surface = guiutils.get_cairo_image("audio_levels_menu_launch")
         levels_launcher = guicomponents.PressLaunch(trackaction.audio_levels_menu_launch_pressed, levels_launcher_surface, 22*size_adj, 22*size_adj)
-        
+
+        levels_launcher_surface = guiutils.get_cairo_image("audio_levels_menu_launch")
+        levels_launcher = guicomponents.PressLaunch(trackaction.audio_levels_menu_launch_pressed, levels_launcher_surface, 22*size_adj, 22*size_adj)
+
         # Timeline top row
         tline_hbox_1 = Gtk.HBox()
         tline_hbox_1.pack_start(info_h, False, False, 0)
@@ -789,8 +796,20 @@ class EditorWindow:
         tline_hbox_2.pack_start(self.tline_column.widget, False, False, 0)
         tline_hbox_2.pack_start(self.tline_canvas.widget, True, True, 0)
         
+        # Comp mode selector
+        size_adj = 1
+        tds = guiutils.get_cairo_image("top_down")
+        tdds = guiutils.get_cairo_image("top_down_auto")
+        sas = guiutils.get_cairo_image("standard_auto")
+        surfaces = [tds, tdds, sas]
+        comp_mode_launcher = guicomponents.ImageMenuLaunch(projectaction.compositing_mode_menu_launched, surfaces, 22*size_adj, 20)
+        comp_mode_launcher.surface_x = 0
+        comp_mode_launcher.surface_y = 4
+        comp_mode_launcher.widget.set_tooltip_markup(_("Current Sequence Compositing Mode"))
+        self.comp_mode_launcher = comp_mode_launcher
+
         # Bottom row filler
-        self.left_corner = guicomponents.TimeLineLeftBottom()
+        self.left_corner = guicomponents.TimeLineLeftBottom(comp_mode_launcher)
         self.left_corner.widget.set_size_request(tlinewidgets.COLUMN_WIDTH, 20)
 
         # Timeline scroller
@@ -823,9 +842,8 @@ class EditorWindow:
         self.app_v_paned.pack2(tline_pane, resize=True, shrink=False)
         self.app_v_paned.no_dark_bg = True
 
-
         # Menu box
-        # menubar size 348, 28 if w want to center someting her with set_size_request
+        # menubar size 348, 28 if w want to center someting here with set_size_request
         self.menubar.set_margin_bottom(4)
         menu_vbox = Gtk.HBox(False, 0)
         menu_vbox.pack_start(guiutils.get_right_justified_box([self.menubar]), False, False, 0)

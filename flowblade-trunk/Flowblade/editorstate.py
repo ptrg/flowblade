@@ -96,7 +96,7 @@ SCREEN_WIDTH = -1
 # Runtime environment data
 gtk_version = None
 mlt_version = None
-appversion = "2.2.0"
+appversion = "2.4.0"
 RUNNING_FROM_INSTALLATION = 0
 RUNNING_FROM_DEV_VERSION = 1
 RUNNING_FROM_FLATPAK = 2
@@ -133,6 +133,7 @@ show_trim_view = appconsts.TRIM_VIEW_OFF
 # Remember fade and transition lengths for next invocation, users prefer this over one default value.
 fade_length = -1
 transition_length = -1
+steal_frames = True
 
 # Trim clips cache for quicker inits, path -> clip
 _trim_clips_cache = {}

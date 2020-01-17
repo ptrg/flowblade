@@ -114,7 +114,7 @@ log_event_popup_menu = Gtk.Menu()
 levels_menu = Gtk.Menu()
 clip_effects_hamburger_menu = Gtk.Menu()
 bin_popup_menu = Gtk.Menu()
-
+filter_mask_menu = Gtk.Menu()
 
 # ------------------------------------------------- item lists
 class ImageTextTextListView(Gtk.VBox):
@@ -1737,9 +1737,11 @@ def _get_compositors_add_menu_item(event, clip, track, callback, sensitive):
         compositor_item.show()
  
     _add_separetor(sub_menu)
-     
-    alpha_combiners_menu_item = _get_alpha_combiners_add_menu_item(event, clip, track, callback, sensitive)
-    sub_menu.append(alpha_combiners_menu_item)
+    
+    if current_sequence().compositing_mode != appconsts.COMPOSITING_MODE_STANDARD_AUTO_FOLLOW:
+        alpha_combiners_menu_item = _get_alpha_combiners_add_menu_item(event, clip, track, callback, sensitive)
+        sub_menu.append(alpha_combiners_menu_item)
+
     blenders_menu_item  = _get_blenders_add_menu_item(event, clip, track, callback, sensitive)
     sub_menu.append(blenders_menu_item)
     wipe_compositors_menu_item = _get_wipe_compositors_add_menu_item(event, clip, track, callback, sensitive)
@@ -1897,6 +1899,11 @@ def _get_edit_menu_item(event, clip, track, callback):
     menu_item = Gtk.MenuItem(_("Edit"))
     sub_menu = Gtk.Menu()
     menu_item.set_submenu(sub_menu)
+
+    if clip.media_type != appconsts.PATTERN_PRODUCER:
+        reload_item = _get_menu_item(_("Reload Media From Disk"), callback, (clip, track, "reload_media", event.x))
+        sub_menu.append(reload_item)
+        _add_separetor(sub_menu)
 
     if (clip.media_type == appconsts.IMAGE_SEQUENCE or clip.media_type == appconsts.IMAGE or clip.media_type == appconsts.PATTERN_PRODUCER) == False:
         vol_item = _get_menu_item(_("Volume Keyframes"), callback, (clip, track, "volumekf", event.x))
@@ -2551,18 +2558,24 @@ class MonitorTCInfo:
     
 
 class TimeLineLeftBottom:
-    def __init__(self):
+    def __init__(self, comp_mode_launch):
         self.widget = Gtk.HBox()
+        self.comp_mode_launch = comp_mode_launch
         self.update_gui()
 
     def update_gui(self):
         for child in self.widget.get_children():
             self.widget.remove(child)
+        
         self.widget.pack_start(Gtk.Label(), True, True, 0)
+
         if PROJECT().proxy_data.proxy_mode == appconsts.USE_PROXY_MEDIA:
             proxy_img =  Gtk.Image.new_from_file(respaths.IMAGE_PATH + "project_proxy.png")
             self.widget.pack_start(proxy_img, False, False, 0)
 
+        self.widget.pack_start(self.comp_mode_launch.widget, False, False, 0)
+        self.widget.pack_start(guiutils.pad_label(4,4), False, False, 0)
+            
         self.widget.show_all()
         self.widget.queue_draw()
 
@@ -2804,7 +2817,6 @@ def get_audio_levels_popup_menu(event, callback):
     menu.popup(None, None, None, None, event.button, event.time)
 
 def get_clip_effects_editor_hamburger_menu(event, callback):
-    # needs renaming
     menu = clip_effects_hamburger_menu
     guiutils.remove_children(menu)
 
@@ -2820,6 +2832,31 @@ def get_clip_effects_editor_hamburger_menu(event, callback):
     
     menu.add(_get_menu_item(_("Close Editor"), callback, "close"))
 
+    menu.show_all()
+    menu.popup(None, None, None, None, event.button, event.time)
+
+def get_filter_mask_menu(event, callback, filter_names, filter_msgs):
+    menu = filter_mask_menu
+    guiutils.remove_children(menu)
+
+    menu_item = Gtk.MenuItem(_("Add Filter Mask on Selected Filter"))
+    sub_menu = Gtk.Menu()
+    menu_item.set_submenu(sub_menu)
+    #U+2192 right"\u21c9" Left U+21c7
+    for f_name, f_msg in zip(filter_names, filter_msgs):
+        sub_menu.add(_get_menu_item("\u21c9" + " " + f_name, callback, (False, f_msg)))
+
+    menu.add(menu_item)
+
+    menu_item = Gtk.MenuItem(_("Add Filter Mask on All Filters"))
+    sub_menu = Gtk.Menu()
+    menu_item.set_submenu(sub_menu)
+    
+    for f_name, f_msg in zip(filter_names, filter_msgs):
+        sub_menu.add(_get_menu_item(f_name, callback, (True, f_msg)))
+
+    menu.add(menu_item)
+    
     menu.show_all()
     menu.popup(None, None, None, None, event.button, event.time)
 
@@ -3039,8 +3076,8 @@ class PressLaunch:
 
         self.callback = callback
         self.surface = surface
-        self.surface_x  = 6
-        self.surface_y  = 6
+        self.surface_x = 6
+        self.surface_y = 6
 
     def _draw(self, event, cr, allocation):
         cr.set_source_surface(self.surface, self.surface_x, self.surface_y)
@@ -3103,7 +3140,7 @@ class ToolSelector(ImageMenuLaunch):
 
     
 class HamburgerPressLaunch:
-    def __init__(self, callback):
+    def __init__(self, callback, surfaces=None, width=-1): # We are using this with other launchers that need to be able to set non sensitive
         # Aug-2019 - SvdB - BB
         prefs = editorpersistance.prefs
         size_adj = 1
@@ -3112,15 +3149,25 @@ class HamburgerPressLaunch:
             size_adj = 2
             y_adj = -2
         
-        self.widget = cairoarea.CairoDrawableArea2( 18*size_adj,
-                                                    18*size_adj,
+        if width == -1:
+            x_size = 18
+        else:
+            x_size = width
+
+        self.widget = cairoarea.CairoDrawableArea2( x_size * size_adj,
+                                                    18 * size_adj,
                                                     self._draw)
         self.widget.press_func = self._press_event
         self.sensitive = True
         self.callback = callback
         
-        self.surface_active = guiutils.get_cairo_image("hamburger")
-        self.surface_not_active = guiutils.get_cairo_image("hamburger_not_active")
+        if surfaces == None:
+            self.surface_active = guiutils.get_cairo_image("hamburger")
+            self.surface_not_active = guiutils.get_cairo_image("hamburger_not_active")
+        else:
+            self.surface_active = surfaces[0]
+            self.surface_not_active = surfaces[1]
+
         self.surface_x  = 0
         self.surface_y  = y_adj
     
