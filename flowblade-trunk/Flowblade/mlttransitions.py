@@ -136,10 +136,8 @@ def init_module():
     # name -> mlt_compositor_transition_infos key dict.
     unsorted_compositors = [ (_("Dissolve"),"##opacity_kf"),
                              (_("Picture in Picture"),"##pict_in_pict"),
-
                              (_("Affine Blend"), "##affineblend"),
                              (_("Blend"), "##blend"),
-
                              (_("Transform"),"##affine")]
 
     compositors = sorted(unsorted_compositors, key=lambda comp: comp[0])   
@@ -556,7 +554,7 @@ def get_rendered_transition_tractor(current_sequence,
             track1.insert(from_clip, 0, orig_from.clip_in, orig_from.clip_in + length)
             kf_str = "0=0/0:100%x100%:0.0;"+ str(length) + "=0/0:100%x100%:100.0"
         else: # transition_type ==  RENDERED_FADE_OUT
-            track1.insert(from_clip, 0, orig_from.clip_out - length, orig_from.clip_out)
+            track1.insert(from_clip, 0, orig_from.clip_out - length + 1, orig_from.clip_out + 1)
             kf_str = "0=0/0:100%x100%:100.0;"+ str(length) + "=0/0:100%x100%:0.0"
 
     # Create transition

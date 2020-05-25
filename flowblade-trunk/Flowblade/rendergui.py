@@ -132,12 +132,17 @@ def save_ffmpeg_opts_dialog(callback, opts_extension):
     dialog.connect('response', callback)
     dialog.show()
 
-def clip_render_progress_dialog(callback, title, text, progress_bar, parent_window):
-    dialog = Gtk.Dialog(title,
-                         parent_window,
-                         Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                         (_("Cancel"), Gtk.ResponseType.REJECT))
-
+def clip_render_progress_dialog(callback, title, text, progress_bar, parent_window, no_cancel=False):
+    if no_cancel == False:
+        dialog = Gtk.Dialog( title,
+                             parent_window,
+                             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                             (_("Cancel"), Gtk.ResponseType.REJECT))
+    else:
+        dialog = Gtk.Dialog( title,
+                             parent_window,
+                             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT)
+                             
     dialog.text_label = Gtk.Label(label=text)
     dialog.text_label.set_use_markup(True)
     text_box = Gtk.HBox(False, 2)
@@ -153,14 +158,14 @@ def clip_render_progress_dialog(callback, title, text, progress_bar, parent_wind
     progress_vbox.pack_start(guiutils.get_pad_label(10, 10), False, False, 0)
     progress_vbox.pack_start(progress_bar, False, False, 0)
 
-
     alignment = guiutils.set_margins(progress_vbox, 12, 12, 12, 12)
 
     dialog.vbox.pack_start(alignment, True, True, 0)
     dialogutils.set_outer_margins(dialog.vbox)
     dialog.set_default_size(500, 125)
     alignment.show_all()
-    dialog.connect('response', callback)
+    if no_cancel == False:
+        dialog.connect('response', callback)
     dialog.show()
     return dialog
 
@@ -484,7 +489,7 @@ class RenderAudioRateSelector():
     def __init__(self):
         self.widget = Gtk.ComboBoxText()
         self.widget.set_tooltip_text(_("Select audio sample frequency"))
-        self.sample_rates = [8000, 12000, 16000, 22500, 32000, 44100, 48000, 96000]
+        self.sample_rates = [8000, 12000, 16000, 22500, 32000, 44100, 48000]
         for rate in self.sample_rates:
             val = rate / 1000.0
             if val == math.floor(val):

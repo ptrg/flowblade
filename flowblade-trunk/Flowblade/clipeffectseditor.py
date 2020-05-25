@@ -26,8 +26,10 @@ import copy
 from gi.repository import GLib
 from gi.repository import Gtk
 import pickle
+import threading
 import time
 
+import appconsts
 import atomicfile
 import dialogs
 import dialogutils
@@ -42,6 +44,7 @@ import mltfilters
 import propertyedit
 import propertyeditorbuilder
 import respaths
+import tlinerender
 import translations
 import updater
 import utils
@@ -53,6 +56,12 @@ track = None # Track of the clip being editeds
 clip_index = None # Index of clip being edited
 block_changed_update = False # Used to block unwanted callback update from "changed", hack and a broken one, look to fix
 current_filter_index = -1 # Needed to find right filter object when saving/loading effect values
+
+# Property change polling.
+# We didn't put a layer of indirection to look for and launch events on filter property edits
+# so now we detect filter edits by polling. This has no performance impect, n is so small.
+_edit_polling_thread = None
+filter_changed_since_last_save = False
 
 # This is updated when filter panel is displayed and cleared when removed.
 # Used to update kfeditors with external tline frame position changes
@@ -67,7 +76,13 @@ stack_dnd_state = NOT_ON
 stack_dnd_event_time = 0.0
 stack_dnd_event_info = None
 
-filters_notebook_index = 2
+filters_notebook_index = 2 # 2 for single window, app.py sets to 1 for two windows
+
+def shutdown_polling():
+    global _edit_polling_thread
+    if _edit_polling_thread != None:
+        _edit_polling_thread.shutdown()
+        _edit_polling_thread = None
 
 def get_clip_effects_editor_panel(group_combo_box, effects_list_view):
     create_widgets()
@@ -76,8 +91,6 @@ def get_clip_effects_editor_panel(group_combo_box, effects_list_view):
     
     label_row = guiutils.get_left_justified_box([stack_label])
     guiutils.set_margins(label_row, 0, 4, 0, 0)
-    
-
     
     effect_stack = widgets.effect_stack_view    
 
@@ -190,7 +203,16 @@ def set_clip(new_clip, new_track, new_index, show_tab=True):
         effect_selection_changed()
 
     if show_tab:
-        gui.middle_notebook.set_current_page(filters_notebook_index) # 2 == index of clipeditor page in notebook
+        gui.middle_notebook.set_current_page(filters_notebook_index)
+    
+    
+    global _edit_polling_thread
+    # Close old polling
+    if _edit_polling_thread != None:
+        _edit_polling_thread.shutdown()
+    # Start new polling
+    _edit_polling_thread = PropertyChangePollingThread()
+    _edit_polling_thread.start()
 
 def effect_select_row_double_clicked(treeview, tree_path, col):
     add_currently_selected_effect()
@@ -246,6 +268,7 @@ def clear_clip():
     effect_selection_changed()
     update_stack_view()
     set_enabled(False)
+    shutdown_polling()
 
 def _set_no_clip_info():
     widgets.clip_info.set_no_clip_info()
@@ -362,7 +385,8 @@ def get_filter_add_action(filter_info, target_clip):
     return action
 
 def _alpha_filter_add_maybe_info(filter_info):
-    if editorpersistance.prefs.show_alpha_info_message == True:
+    if editorpersistance.prefs.show_alpha_info_message == True and \
+       editorstate. current_sequence().compositing_mode != appconsts.COMPOSITING_MODE_STANDARD_FULL_TRACK:
         dialogs.alpha_info_msg(_alpha_info_dialog_cb, translations.get_filter_name(filter_info.name))
 
 def _alpha_info_dialog_cb(dialog, response_id, dont_show_check):
@@ -592,10 +616,11 @@ def effect_selection_changed(use_current_filter_index=False):
             if ((editor_type == propertyeditorbuilder.KEYFRAME_EDITOR)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_RELEASE)
                 or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP)
-                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)):
+                or (editor_type == propertyeditorbuilder.FILTER_RECT_GEOM_EDITOR)
+                or (editor_type == propertyeditorbuilder.KEYFRAME_EDITOR_CLIP_FADE_FILTER)):
                     keyframe_editor_widgets.append(editor_row)
             
-            # if slider property is being dedited as keyrame property
+            # if slider property is being edited as keyrame property
             if hasattr(editor_row, "is_kf_editor"):
                 keyframe_editor_widgets.append(editor_row)
 
@@ -610,7 +635,7 @@ def effect_selection_changed(use_current_filter_index=False):
 
         # Extra editors. Editable properties may have already been created 
         # with "editor=no_editor" and now extra editors may be created to edit those
-        # Non mlt properties are added as these are only need with extraeditors
+        # Non mlt properties are added as these are only needed with extraeditors
         editable_properties.extend(non_mlteditable_properties)
         editor_rows = propertyeditorbuilder.get_filter_extra_editor_rows(filter_object, editable_properties)
         for editor_row in editor_rows:
@@ -687,7 +712,7 @@ def filter_edit_done(edited_clip, index=-1):
     else:
         widgets.add_filter_mask.set_sensitive(True)
 
-    # Select row in effect stack view and so display corresponding effect editor panel.
+    # Select row in effect stack view and to display corresponding effect editor panel.
     if not(index < 0):
         widgets.effect_stack_view.treeview.get_selection().select_path(str(index))
     else: # no effects after edit, clear effect editor panel
@@ -767,6 +792,8 @@ def _clip_hamburger_item_activated(widget, msg):
         _reset_filter_values()
     elif msg == "delete":
         _delete_effect()
+    elif msg == "fade_length":
+        dialogs.set_fade_length_default_dialog(_set_fade_length_dialog_callback, PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH))
     elif msg == "close":
         clear_clip()
         
@@ -812,6 +839,61 @@ def _reset_filter_values():
 
 def _delete_effect():
     delete_effect_pressed()
+
+def _set_fade_length_dialog_callback(dialog, response_id, spin):
+    if response_id == Gtk.ResponseType.ACCEPT:
+        default_length = int(spin.get_value())
+        PROJECT().set_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH, default_length)
+        
+    dialog.destroy()
+    
+class PropertyChangePollingThread(threading.Thread):
+    
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.last_properties = None
+        
+    def run(self):
+
+        self.running = True
+        while self.running:
+            global clip
+            if clip == None:
+                self.shutdown()
+            else:
+                if self.last_properties == None:
+                    self.last_properties = self.get_clip_filters_properties()
+                
+                new_properties = self.get_clip_filters_properties()
+                
+                changed = False
+                for new_filt_props, old_filt_props in zip(new_properties, self.last_properties):
+                        for new_prop, old_prop in zip(new_filt_props, old_filt_props):
+                            if new_prop != old_prop:
+                                changed = True
+
+                if changed:
+                    global filter_changed_since_last_save
+                    filter_changed_since_last_save = True
+                    tlinerender.get_renderer().timeline_changed()
+
+                self.last_properties = new_properties
+                
+                time.sleep(1.0)
+
+    def get_clip_filters_properties(self):
+        filters_properties = []
+        for filt in clip.filters:
+            filt_props = []
+            for prop in filt.properties:
+                filt_props.append(copy.deepcopy(prop))
+
+            filters_properties.append(filt_props)
+        
+        return filters_properties
+        
+    def shutdown(self):
+        self.running = False
 
 
 class EffectValuesSaveData:

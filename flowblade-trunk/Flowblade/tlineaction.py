@@ -19,7 +19,7 @@
 """
 
 """
-Module handles button edit events from buttons in the middle bar.
+Module handles button edit events from buttons in the middle bar and other non-tool edits targeting timeline.
 """
 
 
@@ -27,6 +27,7 @@ Module handles button edit events from buttons in the middle bar.
 from gi.repository import Gtk
 from gi.repository import Gdk
 
+import copy
 import hashlib
 import os
 from operator import itemgetter
@@ -65,6 +66,7 @@ import renderconsumer
 import respaths
 import sequence
 import syncsplitevent
+import tlinerender
 import updater
 import userfolders
 import utils
@@ -92,6 +94,10 @@ def _get_new_clip_from_clip_monitor():
         new_clip = current_sequence().create_file_producer_clip(MONITOR_MEDIA_FILE().path, None, False, MONITOR_MEDIA_FILE().ttl)
     else:
         new_clip = current_sequence().create_pattern_producer(MONITOR_MEDIA_FILE())
+    
+    if MONITOR_MEDIA_FILE().container_data != None:
+        new_clip.container_data = copy.deepcopy(MONITOR_MEDIA_FILE().container_data)
+        new_clip.container_data.container_data.generate_clip_id()
         
     # Set clip in and out points
     new_clip.mark_in = MONITOR_MEDIA_FILE().mark_in
@@ -457,10 +463,19 @@ def _attempt_clip_cover_delete(clip, track, index):
         cover_form_clip = track.clips[movemodes.selected_range_in - 1]
         cover_to_clip = track.clips[movemodes.selected_range_in + 1]
         
-        real_length = clip.get_length()
+        real_length = clip.get_length() # this the mlt finction giving media length, not length on timeline
+
         to_part = real_length // 2
         from_part = real_length - to_part
-    
+
+        # Fix lengths to match what existed before adding rendered transition
+        clip_marks_length = clip.clip_out - clip.clip_in
+        if clip_marks_length % 2 == 1:
+            to_part += -1
+        else:
+            from_part += 1
+            to_part += -1
+
         if to_part > cover_to_clip.clip_in:
             return False
         if from_part > cover_form_clip.get_length() - cover_form_clip.clip_out - 1:# -1, clip_out inclusive
@@ -656,6 +671,7 @@ def range_overwrite_pressed():
     mark_out_frame = current_sequence().tractor.mark_out
     
     # Case timeline marked
+    print(mark_in_frame, mark_out_frame, over_clip.mark_out, over_clip.mark_in)
     if mark_in_frame != -1 and mark_out_frame != -1:
         range_length = mark_out_frame - mark_in_frame + 1 # end is incl.
         if over_clip.mark_in == -1:
@@ -673,19 +689,18 @@ def range_overwrite_pressed():
     # Case clip marked
     elif over_clip.mark_out != -1 and over_clip.mark_in != -1:
         range_length = over_clip.mark_out - over_clip.mark_in + 1 # end is incl.
-        
-        if mark_in_frame == -1:
-            show_three_point_edit_not_defined()
-            return
 
-        over_length = track.get_length() - mark_in_frame + 1 # + 1 out incl
-        if over_length < range_length:
-            monitor_clip_too_short(gui.editor_window.window)
-            return
-            
         over_clip_out = over_clip.mark_out
-        mark_out_frame = mark_in_frame + range_length - 1 # -1 because it gets readded later
-        
+        if mark_out_frame == -1:
+            # Mark in defined
+            mark_out_frame = mark_in_frame + range_length - 1 # -1 because it gets readded later
+        else:
+            # Mark out defined
+            mark_in_frame = mark_out_frame - range_length + 1
+            if mark_in_frame < 0:
+                clip_shortning = -mark_in_frame
+                mark_in_frame = 0
+                over_clip.mark_in = over_clip.mark_in + clip_shortning # moving overclip in forward because in needs to hit timeline frame 0
     # case neither clip or timeline has both in and out points
     else:
         show_three_point_edit_not_defined()
@@ -695,6 +710,7 @@ def range_overwrite_pressed():
 
     updater.save_monitor_frame = False # hack to not get wrong value saved in MediaFile.current_frame
 
+    #print((over_clip_out- over_clip.mark_in), (mark_out_frame + 1 - mark_in_frame))
     data = {"track":track,
             "clip":over_clip,
             "clip_in":over_clip.mark_in,
@@ -703,6 +719,7 @@ def range_overwrite_pressed():
             "mark_out_frame":mark_out_frame + 1} # +1 because mark is displayed and end of frame end this 
                                                  # confirms to user expectation of
                                                  # of how this should work
+    #print(data)
     action = edit.range_overwrite_action(data)
     action.do_edit()
 
@@ -931,7 +948,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
 
     # Get values to build transition render sequence
     # Divide transition lenght between clips, odd frame goes to from_clip 
-    real_length = length + 1 # first frame is 100% from clip frame so we are going to have to drop that
+    real_length = length + 1 # first frame is 100% a from_clip frame so we are going to have to drop that
     to_part = real_length // 2
     from_part = real_length - to_part
 
@@ -1036,7 +1053,7 @@ def _add_transition_dialog_callback(dialog, response_id, selection_widgets, tran
                                                 
     # Save transition data into global variable to be available at render complete callback
     global transition_render_data
-    transition_render_data = (trans_index, from_clip, to_clip, transition_data["track"], from_in, to_out, transition_type_selection_index, creation_data)
+    transition_render_data = (trans_index, from_clip, to_clip, transition_data["track"], from_in, to_out, transition_type_selection_index, creation_data, add_thingy)
     window_text, type_id = mlttransitions.rendered_transitions[transition_type_selection_index]
     window_text = _("Rendering ") + window_text
 
@@ -1051,7 +1068,7 @@ def _transition_render_complete(clip_path):
     print("Render complete")
 
     global transition_render_data
-    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data = transition_render_data
+    transition_index, from_clip, to_clip, track, from_in, to_out, transition_type, creation_data, length_fix = transition_render_data
 
     transition_clip = current_sequence().create_rendered_transition_clip(clip_path, transition_type)
     transition_clip.creation_data = creation_data
@@ -1062,7 +1079,8 @@ def _transition_render_complete(clip_path):
             "to_clip":to_clip,
             "track":track,
             "from_in":from_in,
-            "to_out":to_out}
+            "to_out":to_out,
+            "length_fix":length_fix}
 
     action = edit.add_centered_transition_action(data)
     action.do_edit()
@@ -1982,4 +2000,6 @@ def set_track_small_height(track_index):
     track.height = appconsts.TRACK_HEIGHT_SMALL
     if editorstate.SCREEN_HEIGHT < 863:
         track.height = appconsts.TRACK_HEIGHT_SMALLEST
+
+
 

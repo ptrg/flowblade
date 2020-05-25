@@ -152,17 +152,31 @@ def get_image(img_name, suffix = ".png", force = None):
     if force == None:
         force = editorpersistance.prefs.double_track_hights
     if force:
-        img_name = img_name + "@2"
-    return Gtk.Image.new_from_file(respaths.IMAGE_PATH + img_name + suffix)
+        new_name = img_name + "@2"
+    else:
+        new_name = img_name
+    try:
+        img = Gtk.Image.new_from_file(respaths.IMAGE_PATH + new_name + suffix)
+    except:
+        img = Gtk.Image.new_from_file(respaths.IMAGE_PATH + img_name + suffix)
+    return img
+    
 
 # Aug-2019 - SvdB - BB
 def get_cairo_image(img_name, suffix = ".png", force = None):
+    # Apr-2020 - SvdB - Make it sturdier in case a @2 image is missing. Just display the original image.
     # Use parameter force as True or False to force the track height no matter what the preferences setting
     if force == None:
         force = editorpersistance.prefs.double_track_hights
     if force:
-        img_name = img_name + "@2"
-    return cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + img_name + suffix)
+        new_name = img_name + "@2"
+    else:
+        new_name = img_name
+    try:
+        img = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + new_name + suffix)
+    except:
+        img = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + img_name + suffix)
+    return img
 
 # Aug-2019 - SvdB - BB
 def get_image_button(img_file_name, width, height):
@@ -301,13 +315,17 @@ def get_named_frame(name, widget, left_padding=12, right_padding=6, right_out_pa
         label_box.pack_start(Gtk.Label(), True, True, 0)
         if tooltip_txt != None:        
             label.set_tooltip_markup(tooltip_txt)
-            
+    else:
+        label = Gtk.Label()
+
     alignment = set_margins(widget, right_padding, 0, left_padding, 0)
 
     frame = Gtk.VBox()
     if name != None:
         frame.pack_start(label_box, False, False, 0)
     frame.pack_start(alignment, True, True, 0)
+    
+    frame.name_label = label
     
     out_align = set_margins(frame, 4, 4, 0, right_out_padding)
     

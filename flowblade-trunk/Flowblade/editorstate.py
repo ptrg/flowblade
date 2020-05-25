@@ -135,6 +135,9 @@ fade_length = -1
 transition_length = -1
 steal_frames = True
 
+# Timeline rendering
+tline_render_mode = appconsts.TLINE_RENDERING_OFF
+
 # Trim clips cache for quicker inits, path -> clip
 _trim_clips_cache = {}
 
@@ -192,6 +195,9 @@ def get_compositing_mode():
     else:
         return project.c_seq.compositing_mode
 
+def get_tline_rendering_mode():
+    return tline_render_mode
+        
 def get_track(index):
     return project.c_seq.tracks[index]
 

@@ -89,7 +89,7 @@ _current_preview_surface = None
 _current_dimensions = None
 _current_fps = None
 _current_profile_index = None
-_render_data = None
+_render_data = None # toolsencoding.ToolsRenderData object
 _last_load_file = None
 
 _startup_data = None
@@ -539,10 +539,10 @@ def render_current_frame_preview():
     _preview_render.start()
 
 def _encode_settings_clicked():
-    toolsencoding.create_widgets(_current_profile_index, True)
+    toolsencoding.create_widgets(_current_profile_index)
         
     global _encoding_panel
-    _encoding_panel = toolsencoding.get_enconding_panel(_render_data)
+    _encoding_panel = toolsencoding.get_encoding_panel(_render_data)
 
     if _render_data == None and toolsencoding.widgets.file_panel.movie_name.get_text() == "movie":
         toolsencoding.widgets.file_panel.movie_name.set_text(os.path.basename(_current_path).split(".")[0] + "_gmic")
@@ -593,7 +593,6 @@ class GmicWindow(Gtk.Window):
 
         app_icon = GdkPixbuf.Pixbuf.new_from_file(respaths.IMAGE_PATH + "flowbladetoolicon.png")
         self.set_icon(app_icon)
-
         hamburger_launcher_surface = cairo.ImageSurface.create_from_png(respaths.IMAGE_PATH + "hamburger.png")
         self.hamburger_launcher = guicomponents.PressLaunch(self.hamburger_launch_pressed, hamburger_launcher_surface)
         
@@ -1099,7 +1098,7 @@ class GmicPreviewRendererer(threading.Thread):
             # For the case the render fails
             shutil.copyfile(get_current_frame_file(), get_preview_file())
         except IOError:
-            # No we have failed to extract a png file from source file
+            # We have failed to extract a png file from source file
             Gdk.threads_enter()
             _window.out_view.override_color((Gtk.StateFlags.NORMAL and Gtk.StateFlags.ACTIVE), Gdk.RGBA(red=1.0, green=0.0, blue=0.0))
             _window.out_view.get_buffer().set_text("Extracting PNG frames from this file failed!")
@@ -1157,11 +1156,11 @@ class GmicEffectRendererer(threading.Thread):
         self.frames_range_writer = None
         
         self.abort = False
+        self.script_renderer = None
         
         # Refuse to render into user home folder
         out_folder = _window.out_folder.get_filenames()[0] + "/"
         if out_folder == (os.path.expanduser("~") + "/"):
-            #print "home folder"
             return
             
         start_time = time.time()
@@ -1187,7 +1186,7 @@ class GmicEffectRendererer(threading.Thread):
             file_path = os.path.join(folder, frame_file)
             os.remove(file_path)
         
-        # Render clipm frames for range
+        # Render clip frames for range
         mark_in = _player.producer.mark_in
         mark_out = _player.producer.mark_out
         self.length = mark_out - mark_in + 1
@@ -1195,10 +1194,8 @@ class GmicEffectRendererer(threading.Thread):
         self.mark_out = mark_out
         
         frame_name = _window.frame_name.get_text()
-        
-        # jotain controllii frame_namelle
 
-        self.frames_range_writer = gmicplayer.FramesRangeWriter(_current_path, self.frames_update)
+        self.frames_range_writer = gmicplayer.get_frames_range_writer_for_current_profile(_current_path, self.frames_update)
         self.frames_range_writer.write_frames(get_render_frames_dir() + "/", frame_name, mark_in, mark_out)
 
         if self.abort == True:
@@ -1214,58 +1211,16 @@ class GmicEffectRendererer(threading.Thread):
 
         while len(os.listdir(folder)) != self.length:
             time.sleep(0.5)
-            
-        clip_frames = os.listdir(folder)
-
-        frame_count = 1
-        for clip_frame in clip_frames:
-            if self.abort == True:
-                return
-            
-            update_info = _("Rendering frame: ") + str(frame_count) + "/" +  str(self.length)
-
-            Gdk.threads_enter()
-            _window.render_percentage.set_markup("<small>" + update_info + "</small>")
-            _window.render_progress_bar.set_fraction(float(frame_count)/float(self.length))
-            Gdk.threads_leave()
- 
-            file_numbers_list = re.findall(r'\d+', clip_frame)
-            filled_number_str = str(file_numbers_list[0]).zfill(3)
-
-            clip_frame_path = os.path.join(folder, clip_frame)
-            rendered_file_path = out_folder + frame_name + "_" + filled_number_str + ".png"
-            
-            script_str = "gmic " + clip_frame_path + " " + user_script + " -output " +  rendered_file_path
-
-            if frame_count == 1: # first frame displays shell output and does error checking
-                FLOG = open(userfolders.get_cache_dir() + "log_gmic_preview", 'w')
-                p = subprocess.Popen(script_str, shell=True, stdin=FLOG, stdout=FLOG, stderr=FLOG)
-                p.wait()
-                FLOG.close()
-                
-                # read log
-                f = open(userfolders.get_cache_dir() + "log_gmic_preview", 'r')
-                out = f.read()
-                f.close()
-                
-                Gdk.threads_enter()
-                _window.out_view.get_buffer().set_text(out + "Return code:" + str(p.returncode))
-                if p.returncode != 0:
-                    _window.out_view.override_color((Gtk.StateFlags.NORMAL and Gtk.StateFlags.ACTIVE), Gdk.RGBA(red=1.0, green=0.0, blue=0.0))
-                    _window.render_percentage.set_text(_("Render error!"))
-                    Gdk.threads_leave()
-                    return
-                else:
-                    _window.out_view.override_color((Gtk.StateFlags.NORMAL and Gtk.StateFlags.ACTIVE), None)
-                    Gdk.threads_leave()
-            else:
-                FLOG = open(userfolders.get_cache_dir() + "log_gmic_preview", 'w')
-                p = subprocess.Popen(script_str, shell=True, stdin=FLOG, stdout=FLOG, stderr=FLOG)
-                p.wait()
-                FLOG.close()
-
-            frame_count = frame_count + 1
-
+        
+        # Render frames with gmic script
+        self.script_renderer = gmicplayer.FolderFramesScriptRenderer(   user_script, 
+                                                                        folder,
+                                                                        out_folder,
+                                                                        frame_name,
+                                                                        self.script_render_update_callback, 
+                                                                        self.script_render_output_callback)
+        self.script_renderer.write_frames()
+        
         # Render video
         if _window.encode_check.get_active() == True:
             # Render consumer
@@ -1284,6 +1239,8 @@ class GmicEffectRendererer(threading.Thread):
             resource_path = out_folder + "/" + resource_name_str
             producer = mlt.Producer(profile, str(resource_path))
 
+            clip_frames = os.listdir(get_render_frames_dir())
+
             self.render_player = renderconsumer.FileRenderPlayer("", producer, consumer, 0, len(clip_frames) - 1)
             self.render_player.wait_for_producer_end_stop = False
             self.render_player.start()
@@ -1291,6 +1248,10 @@ class GmicEffectRendererer(threading.Thread):
             while self.render_player.stopped == False:
 
                 if self.abort == True:
+                    Gdk.threads_enter()
+                    _window.render_percentage.set_markup("<small>" + _("Render stopped!") + "</small>")
+                    _window.render_progress_bar.set_fraction(0.0)
+                    Gdk.threads_leave()
                     return
                 
                 fraction = self.render_player.get_render_fraction()
@@ -1310,7 +1271,7 @@ class GmicEffectRendererer(threading.Thread):
         
     def frames_update(self, frame):
         if frame - self.mark_in < 0:
-            frame = self.length # hack fix, producer suddenly changes the frame i thinks it is in
+            frame = self.length # hack fix, producer suddenly changes the frame it thinks it is in
         else:
             frame = frame - self.mark_in # producer returns original clip frames
         
@@ -1321,8 +1282,31 @@ class GmicEffectRendererer(threading.Thread):
         _window.render_progress_bar.set_fraction(float(frame + 1)/float(self.length))
         Gdk.threads_leave()
 
+    def script_render_update_callback(self, frame_count):
+        update_info = _("Rendering frame: ") + str(frame_count) + "/" +  str(self.length)
+
+        Gdk.threads_enter()
+        _window.render_percentage.set_markup("<small>" + update_info + "</small>")
+        _window.render_progress_bar.set_fraction(float(frame_count)/float(self.length))
+        Gdk.threads_leave()
+
+    def script_render_output_callback(self, p, out):
+        Gdk.threads_enter()
+        _window.out_view.get_buffer().set_text(out + "Return code:" + str(p.returncode))
+        if p.returncode != 0:
+            _window.out_view.override_color((Gtk.StateFlags.NORMAL and Gtk.StateFlags.ACTIVE), Gdk.RGBA(red=1.0, green=0.0, blue=0.0))
+            _window.render_percentage.set_text(_("Render error!"))
+            Gdk.threads_leave()
+            return
+        else:
+            _window.out_view.override_color((Gtk.StateFlags.NORMAL and Gtk.StateFlags.ACTIVE), None)
+            Gdk.threads_leave()
+
     def abort_render(self):
         self.abort = True
+
+        if self.script_renderer != None:
+             self.script_renderer.abort_rendering()
 
         self.shutdown()
                          

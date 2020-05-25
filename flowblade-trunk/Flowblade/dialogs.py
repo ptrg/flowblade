@@ -442,6 +442,32 @@ def save_env_data_dialog(callback):
     dialog.connect('response', callback)
     dialog.show()
 
+def save_cont_clip_edit_data(callback, default_name, edit_data):
+    dialog = Gtk.FileChooserDialog(_("Save Container Clip Edit Data"),  gui.editor_window.window,
+                                   Gtk.FileChooserAction.SAVE,
+                                   (_("Cancel"), Gtk.ResponseType.CANCEL,
+                                   _("Save"), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.SAVE)
+    dialog.set_current_name(default_name)
+    dialog.set_do_overwrite_confirmation(True)
+    dialog.set_select_multiple(False)
+    dialog.connect('response', callback, edit_data)
+    dialog.show()
+
+def load_cont_clip_edit_data(callback):
+    parent = gui.editor_window.window
+
+    title_text = _("Load Container Clip Program Edit Data") 
+
+    dialog = Gtk.FileChooserDialog(title_text, parent,
+                                   Gtk.FileChooserAction.OPEN,
+                                   (_("Cancel"), Gtk.ResponseType.CANCEL,
+                                    _("OK"), Gtk.ResponseType.ACCEPT))
+    dialog.set_action(Gtk.FileChooserAction.OPEN)
+    dialog.set_select_multiple(False)
+    dialog.connect('response', callback)
+    dialog.show()
+    
 def rendered_clips_no_home_folder_dialog():
     dialogutils.warning_message(_("Can't make home folder render clips folder"),
                             _("Please create and select some other folder then \'") +
@@ -1204,6 +1230,11 @@ def alpha_info_msg(callback, filter_name):
     line_label = Gtk.Label(_("You are adding <b>Alpha Filter '") + filter_name + _("'</b> into a clip. Here is some info on how <b>Alpha Filters</b> work on Flowblade:"))
     line_label.set_use_markup(True)
     row1 = guiutils.get_left_justified_box([line_label])
+
+    line_label = Gtk.Label(_("This applies to all <b>Compositing Modes</b> other then <b>Standard Full Track</b>."))
+    line_label.set_use_markup(True)
+    row11 = guiutils.get_left_justified_box([line_label])
+    guiutils.set_margins(row11, 12, 0, 0, 0)
     
     info_text = "\u2022" + _(" <b>Alpha Filters</b> work by modifying image's alpha channel.\n") + \
                 "\u2022" + _(" To see the effect of <b>Alpha Filter</b> you need composite this clip on track below by adding a <b>Compositor like 'Blend'</b> into this clip.\n") + \
@@ -1219,6 +1250,7 @@ def alpha_info_msg(callback, filter_name):
     vbox.pack_start(row1, False, False, 0)
     vbox.pack_start(guiutils.pad_label(24, 12), False, False, 0)
     vbox.pack_start(info_box, False, False, 0)
+    vbox.pack_start(row11, False, False, 0)
     vbox.pack_start(guiutils.pad_label(24, 24), False, False, 0)
     vbox.pack_start(row2, False, False, 0)
     
@@ -1452,10 +1484,14 @@ def _get_dynamic_kb_shortcuts_panel(xml_file, tool_set):
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "mark_out"), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("Alt + I"), _("Go To Mark In")), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("Alt + O"), _("Go To Mark Out")), False, False, 0)
+    tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "clear_io_marks"), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "cut"), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "cut_all"), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("DELETE"),  _("Splice Out")), False, False, 0)
     tline_vbox.pack_start(_get_kb_row(_("Control + DELETE"),  _("Lift")), False, False, 0)
+    tline_vbox.pack_start(_get_kb_row(_("Alt + C"), _("Clear Filters")), False, False, 0)
+    tline_vbox.pack_start(_get_kb_row(_("Alt + S"), _("Sync Compositor")), False, False, 0)
+    tline_vbox.pack_start(_get_kb_row(_("Alt + R"), _("Resync")), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "insert"), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "append"), False, False, 0)
     tline_vbox.pack_start(_get_dynamic_kb_row(root_node, "3_point_overwrite"), False, False, 0)
@@ -1495,8 +1531,8 @@ def _get_dynamic_kb_shortcuts_panel(xml_file, tool_set):
     play_vbox.pack_start(_get_dynamic_kb_row(root_node, "next_cut"), False, False, 0)
     play_vbox.pack_start(_get_dynamic_kb_row(root_node, "to_start"), False, False, 0)
     play_vbox.pack_start(_get_dynamic_kb_row(root_node, "to_end"), False, False, 0)
-    play_vbox.pack_start(_get_kb_row(_("Shift + I"), _("To Mark In")), False, False, 0)
-    play_vbox.pack_start(_get_kb_row(_("Shift + O"), _("To Mark Out")), False, False, 0)
+    play_vbox.pack_start(_get_kb_row(_("Alt + I"), _("To Mark In")), False, False, 0)
+    play_vbox.pack_start(_get_kb_row(_("Alt + O"), _("To Mark Out")), False, False, 0)
     play = guiutils.get_named_frame(_("Playback"), play_vbox)
 
     tools_vbox = Gtk.VBox()
@@ -1828,4 +1864,28 @@ def confirm_compositing_mode_change(callback, new_compositing_mode):
     dialog.connect('response', callback, new_compositing_mode)
     dialog.show_all()
 
+def set_fade_length_default_dialog(callback, current_value):
+    dialog = Gtk.Dialog(_("Fades Default Lengths"),  gui.editor_window.window,
+                        Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                        (_("Cancel"), Gtk.ResponseType.REJECT,
+                        _("Set"), Gtk.ResponseType.ACCEPT))
+
+    length_spin = Gtk.SpinButton.new_with_range(3, 200, 1)
+    length_spin.set_value(current_value)
+    
+    hbox = Gtk.HBox(False, 2)
+    hbox.pack_start(Gtk.Label(_("Fade Buttons Fades Default Length:")), False, False, 0)
+    hbox.pack_start(length_spin, False, False, 0)
+
+    vbox = Gtk.VBox(False, 2)
+    vbox.pack_start(hbox, False, False, 0)
+    vbox.pack_start(guiutils.get_pad_label(12, 2), False, False, 0)
+
+    alignment = dialogutils.get_alignment2(vbox)
+
+    dialog.vbox.pack_start(alignment, True, True, 0)
+    dialogutils.set_outer_margins(dialog.vbox)
+    _default_behaviour(dialog)
+    dialog.connect('response', callback, length_spin)
+    dialog.show_all()
         

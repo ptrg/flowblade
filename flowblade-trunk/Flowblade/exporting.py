@@ -18,8 +18,6 @@
     along with Flowblade Movie Editor.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-
 from gi.repository import Gtk
 import os
 from xml.dom import minidom
@@ -44,6 +42,7 @@ import renderconsumer
 import utils
 import userfolders
 
+
 REEL_NAME_HASH_8_NUMBER = 1
 REEL_NAME_FILE_NAME_START = 2
 
@@ -53,6 +52,7 @@ _screenshot_img = None
 _img_types = ["png", "bmp", "targa","tiff"]
 _img_extensions = ["png", "bmp", "tga","tif"]
 
+
 ####---------------MLT--------------####    
 def MELT_XML_export():
     dialogs.export_xml_dialog(_export_melt_xml_dialog_callback, PROJECT().name)
@@ -61,10 +61,13 @@ def _export_melt_xml_dialog_callback(dialog, response_id):
     if response_id == Gtk.ResponseType.ACCEPT:
         filenames = dialog.get_filenames()
         save_path = filenames[0]
-        #global _xml_render_monitor
-        _xml_render_player = renderconsumer.XMLRenderPlayer(save_path,
-                                                          _xml_render_done,
-                                                          None)
+
+        _xml_render_player = renderconsumer.XMLRenderPlayer(  save_path,
+                                                              _xml_render_done,
+                                                              None,
+                                                              PROJECT().c_seq,
+                                                              PROJECT(),
+                                                              PLAYER())
         _xml_render_player.start()
         
         dialog.destroy()
@@ -88,7 +91,10 @@ def _export_edl_dialog_callback(dialog, response_id):
         
         _xml_render_player = renderconsumer.XMLRenderPlayer(get_edl_temp_xml_path(),
                                                             _edl_xml_render_done,
-                                                            edl_path)
+                                                            edl_path,
+                                                            PROJECT().c_seq,
+                                                            PROJECT(),
+                                                            PLAYER())
         _xml_render_player.start()
 
         dialog.destroy()
@@ -524,9 +530,13 @@ def _ardour_export_dialog_callback(dialog, response_id, session_folder):
     xml_save_path = userfolders.get_cache_dir() + "ardour_export.xml"
     
     global _xml_render_player
-    _xml_render_player = renderconsumer.XMLRenderPlayer(xml_save_path,
+    _xml_render_player = renderconsumer.XMLRenderPlayer(  xml_save_path,
                                                           _ardour_xml_render_done,
-                                                          None)
+                                                          None,
+                                                          PROJECT().c_seq,
+                                                          PROJECT(),
+                                                          PLAYER())
+
     _xml_render_player.ardour_session_folder = folder_path
     _xml_render_player.start()
 

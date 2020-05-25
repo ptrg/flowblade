@@ -28,6 +28,7 @@ import json
 
 import appconsts
 from editorstate import current_sequence
+from editorstate import PROJECT
 import respaths
 import utils
 
@@ -42,6 +43,10 @@ SCREENSIZE2 = "Screensize2"                                 # replace with "WIDT
 WIPE_PATH = "WIPE_PATH"                                     # path to folder contining wipe resource images
 SCREENSIZE_WIDTH = "SCREENSIZE_WIDTH"                       # replace with width of profile screensize in pix
 SCREENSIZE_HEIGHT = "SCREENSIZE_HEIGHT"                     # replace with height of profile screensize in pix
+VALUE_REPLACEMENT = "value_replacement"                     # attr name for replacing value after clip is known
+FADE_IN_REPLAMENT = "fade_in_replament"                     # replace with fade in keyframes
+FADE_OUT_REPLAMENT = "fade_out_replament"                   # replace with fade out keyframes
+FADE_IN_OUT_REPLAMENT = "fade_in_out_replament"             # replace with fade in and out keyframes
 
 # ------------------------------------------- parse funcs
 def node_list_to_properties_array(node_list):
@@ -120,6 +125,70 @@ def replace_value_keywords(properties, profile):
             value = value.replace(WIPE_PATH, respaths.WIPE_RESOURCES_PATH)
             properties[i] = (name, value, prop_type)
 
+def replace_values_using_clip_data(properties, info, clip):
+    """
+    Property value expressions may need to be replaced with expressions that can only be created
+    with knowing clip.
+    """
+    replacement_happened = False
+    for i in range(0, len(properties)):
+        prop_name, value, prop_type = properties[i]
+        
+        if prop_type == PROP_EXPRESSION:
+            args_str = info.property_args[prop_name]
+            args_dict = args_string_to_args_dict(args_str)
+            
+            for arg_name in args_dict:
+                if arg_name == VALUE_REPLACEMENT:
+                    arg_val = args_dict[arg_name]
+                    clip_length = clip.clip_length()
+                    fade_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+                    
+                    if arg_val == FADE_IN_REPLAMENT:
+                        frame_1 = clip.clip_in
+                        frame_2 = clip.clip_in + fade_length
+                        value = ""
+                        if frame_1 != 0:
+                            value += "0=0;"
+                        
+                        value += str(frame_1) + "=0;" + str(frame_2) + "=1"
+
+                        properties[i] = (prop_name, value, prop_type)
+                        replacement_happened = True
+                    elif arg_val == FADE_OUT_REPLAMENT:
+                        frame_1 = clip.clip_out - fade_length
+                        frame_2 = clip.clip_out
+                        
+                        if clip_length > fade_length:
+                            value = "0=1;" + str(frame_1) + "=1;" + str(frame_2) + "=0"
+                        else:
+                            value = "0=1;" + str(frame_2) + "=0"
+                        properties[i] = (prop_name, value, prop_type)
+                        replacement_happened = True
+                    elif arg_val == FADE_IN_OUT_REPLAMENT:
+                        frame_1 = clip.clip_in
+                        frame_2 = clip.clip_in + fade_length
+                        frame_3 = clip.clip_out - fade_length
+                        frame_4 = clip.clip_out
+                        value = ""
+                        if frame_1 != 0:
+                            value += "0=0;"
+                            
+                        if clip_length > 40:
+                            value += str(frame_1) + "=0;" + str(frame_2) + "=1;"
+                            value += str(frame_3) + "=1;" + str(frame_4) + "=0"
+                        else:
+                            clip_half = int(clip_length//2)
+                            value += str(frame_1) + "=0;"  + str(frame_1 + clip_half) + "=1;" + str(frame_4) + "=0"
+
+                        properties[i] = (prop_name, value, prop_type)
+                        replacement_happened = True
+
+    return replacement_happened
+                
+
+
+            
 def get_args_num_value(val_str):
     """
     Returns numerical value for expression in property

@@ -32,11 +32,13 @@ import cairo
 from gi.repository import Gtk, GObject
 from gi.repository import Pango, PangoCairo
 
+import appconsts
 import cairoarea
 import compositorfades
 import editorpersistance
 from editorstate import PLAYER
 from editorstate import current_sequence
+from editorstate import PROJECT
 import gui
 import guicomponents
 import guiutils
@@ -93,7 +95,6 @@ DISCONNECTED_SIGNAL_HANDLER = -9999999
 
 # Callbacks to compositeeditor.py, monkeypatched at startup
 _get_current_edited_compositor = None
-#add_fade_out_func = None
 
 actions_menu = Gtk.Menu()
 oor_before_menu = Gtk.Menu()
@@ -1121,14 +1122,16 @@ class KeyFrameEditorClipFade(KeyFrameEditor):
 
     def add_fade_in(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_in(compositor, 10) # updates editable_property.value.
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_in(compositor, fade_default_length) # updates editable_property.value.
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
                 
     def add_fade_out(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_out(compositor, 10) # updates editable_property.value.
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_out(compositor, fade_default_length) # updates editable_property.value.
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
@@ -1137,7 +1140,36 @@ class KeyFrameEditorClipFade(KeyFrameEditor):
         self.editable_property.write_out_keyframes(keyframes)
         self.clip_editor.set_keyframes(self.editable_property.value, self.editable_property.get_in_value)
         self.update_editor_view()
+
+
+class KeyFrameEditorClipFadeFilter(KeyFrameEditor):
+    """
+    Used for compositors with just slider and keyframes.
+    """
+    def __init__(self, editable_property):
+        KeyFrameEditor.__init__(self, editable_property, use_clip_in=True, slider_switcher=None, fade_buttons=True)
+
+    def add_fade_in(self):
+        # The code to do fades was written originally for compositors so we are using module compositorfades with some added code for filters.
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_filter_fade_in(self.editable_property.clip, self.editable_property, self.clip_editor.keyframes, fade_default_length)
+        if keyframes == None:
+            return # update failed, clip probably too short
+        self._update_all_for_kf_vec(keyframes)
         
+    def add_fade_out(self):
+        # The code to do fades was written originally for compositors so we are using module compositorfades with some added code for filters.
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_filter_fade_out(self.editable_property.clip, self.editable_property, self.clip_editor.keyframes, fade_default_length)
+        if keyframes == None:
+            return # update failed, clip probably too short
+        self._update_all_for_kf_vec(keyframes)
+
+    def _update_all_for_kf_vec(self, keyframes):
+        self.editable_property.write_out_keyframes(keyframes)
+        self.clip_editor.set_keyframes(self.editable_property.value, self.editable_property.get_in_value)
+        self.update_editor_view()
+
     
 class GeometryEditor(AbstractKeyFrameEditor):
     """
@@ -1271,14 +1303,16 @@ class GeometryEditor(AbstractKeyFrameEditor):
         
     def add_fade_in(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_in(compositor, 10) # updates editable_property.value. Remove fade length hardcoding in 2.4
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_in(compositor, fade_default_length) # updates editable_property.value. Remove fade length hardcoding in 2.4
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
                 
     def add_fade_out(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_out(compositor, 10) # updates editable_property.value. Remove fade length hardcoding in 2.4
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_out(compositor, fade_default_length)
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
@@ -1452,14 +1486,16 @@ class RotatingGeometryEditor(GeometryEditor):
 
     def add_fade_in(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_in(compositor, 10) # updates editable_property.value. Remove fade length hardcoding in 2.4
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_in(compositor, fade_default_length) # updates editable_property.value. Remove fade length hardcoding in 2.4
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
                 
     def add_fade_out(self):
         compositor = _get_current_edited_compositor()
-        keyframes = compositorfades.add_fade_out(compositor, 10) # updates editable_property.value. Remove fade length hardcoding in 2.4
+        fade_default_length = PROJECT().get_project_property(appconsts.P_PROP_DEFAULT_FADE_LENGTH)
+        keyframes = compositorfades.add_fade_out(compositor, fade_default_length) # updates editable_property.value. Remove fade length hardcoding in 2.4
         if keyframes == None:
             return # update failed, clip probably too short
         self._update_all_for_kf_vec(keyframes)
@@ -1555,12 +1591,14 @@ class FilterRectGeometryEditor(AbstractKeyFrameEditor):
         self.buttons_row.set_kf_info(self.clip_editor.get_kf_info())
 
     def get_copy_kf_value(self):
-        return self.clip_editor.get_active_kf_value()
-        
+        return self.geom_kf_edit.get_keyframe(self.clip_editor.active_kf_index)
+         
     def paste_kf_value(self, value_data):
-        self.clip_editor.set_active_kf_value(value_data)
-        self.update_editor_view()
+        frame, rect, opacity = value_data
+        self.clip_editor.set_active_kf_value(opacity)
+        self.geom_kf_edit.set_keyframe_to_edit_shape(self.clip_editor.active_kf_index, rect)
         self.update_property_value()
+        self.update_editor_view()
         
     def next_pressed(self):
         self.clip_editor.set_next_active()
@@ -1604,6 +1642,11 @@ class FilterRectGeometryEditor(AbstractKeyFrameEditor):
             keyframes.append(clip_kf)
         return keyframes
 
+    def view_size_changed(self, selected_index):
+        y_fract = GEOM_EDITOR_SIZES[selected_index]
+        self.geom_kf_edit.set_view_size(y_fract)
+        self.update_editor_view_with_frame(self.clip_editor.current_clip_frame)
+        
     def geometry_edit_started(self): # callback from geom_kf_edit
         self.clip_editor.add_keyframe(self.clip_editor.current_clip_frame)
         self.geom_kf_edit.add_keyframe(self.clip_editor.current_clip_frame)
@@ -1629,7 +1672,45 @@ class FilterRectGeometryEditor(AbstractKeyFrameEditor):
     
     def keyframe_dragged(self, active_kf, frame):
         self.geom_kf_edit.set_keyframe_frame(active_kf, frame)
-        
+
+    def menu_item_activated(self, widget, data):
+        if data == "reset":
+            self._reset_rect_pressed()
+        elif data == "ratio":
+            self._reset_rect_ratio_pressed()
+        elif data == "hcenter":
+            self._center_horizontal()
+        elif data == "vcenter":
+            self._center_vertical()
+
+    def _reset_rect_pressed(self):
+        self.geom_kf_edit.reset_active_keyframe_shape(self.clip_editor.active_kf_index)
+        self.pos_entries_row.update_entry_values(self.geom_kf_edit.get_keyframe(self.clip_editor.active_kf_index))
+        frame = self.clip_editor.get_active_kf_frame()
+        self.update_editor_view_with_frame(frame)
+        self.update_property_value()
+
+    def _reset_rect_ratio_pressed(self):
+        self.geom_kf_edit.reset_active_keyframe_rect_shape(self.clip_editor.active_kf_index)
+        frame = self.clip_editor.get_active_kf_frame()
+        self.pos_entries_row.update_entry_values(self.geom_kf_edit.get_keyframe(self.clip_editor.active_kf_index))
+        self.update_editor_view_with_frame(frame)
+        self.update_property_value()
+
+    def _center_horizontal(self):
+        self.geom_kf_edit.center_h_active_keyframe_shape(self.clip_editor.active_kf_index)
+        frame = self.clip_editor.get_active_kf_frame()
+        self.pos_entries_row.update_entry_values(self.geom_kf_edit.get_keyframe(self.clip_editor.active_kf_index))
+        self.update_editor_view_with_frame(frame)
+        self.update_property_value()
+
+    def _center_vertical(self):
+        self.geom_kf_edit.center_v_active_keyframe_shape(self.clip_editor.active_kf_index)
+        frame = self.clip_editor.get_active_kf_frame()
+        self.pos_entries_row.update_entry_values(self.geom_kf_edit.get_keyframe(self.clip_editor.active_kf_index))
+        self.update_editor_view_with_frame(frame)
+        self.update_property_value()
+
     def update_editor_view(self, seek_tline_frame=True):
         # This gets called when tline frame is changed from outside
         # Call update_editor_view_with_frame that is used when udating from inside the object.
@@ -1652,8 +1733,8 @@ class FilterRectGeometryEditor(AbstractKeyFrameEditor):
         write_keyframes = []
         for opa_kf, geom_kf in zip(self.clip_editor.keyframes, self.geom_kf_edit.keyframes):
             frame, opacity = opa_kf
-            frame, rect, rubbish_opacity = geom_kf # rubbish_opacity was just doing same thing twice for nothing,
-                                                   # and can be removed to clean up code, but could not bothered right now
+            frame, rect, rubbish_opacity = geom_kf
+            
             write_keyframes.append((frame, rect, opacity))
         
         self.editable_property.write_out_keyframes(write_keyframes)
